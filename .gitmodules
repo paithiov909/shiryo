@@ -1,0 +1,4 @@
+[submodule "src/go/src/github.com/nyarla/go-japanese-segmenter"]
+	path = src/go/src/github.com/nyarla/go-japanese-segmenter
+	url = https://github.com/nyarla/go-japanese-segmenter.git
+

@@ -1,3 +1,23 @@
+CURDIR = $(shell Rscript -e "cat(getwd())")
+GOPATH = $(CURDIR)/go
+GOFMT = go fmt
+GOBUILD = go build
 CXX_STD = CXX11
-PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1
-PKG_LIBS += $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "RcppParallel::RcppParallelLibs()")
+CXX11 = g++
+PKG_LIBS += -L../inst/libs$(R_ARCH) -lm -lsegmentrr
+PKG_CPPFLAGS += -I'$(CURDIR)'
+PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1 -DDLL_IMPORT -DSTRICT_R_HEADERS
+
+.PHONY: all
+
+all: build copy $(SHLIB)
+
+build:
+	$(GOFMT) github.com/paithiov909/libsegmentrr
+	GOOS="windows" GOPATH="$(GOPATH)" CXX="$(CXX11)" CGO_ENABLED=1 $(GOBUILD) -o libsegmentrr.a -i -a -x -compiler gc -buildmode=c-archive github.com/paithiov909/libsegmentrr
+
+copy:
+	@cd $(CURDIR)
+	@cp libsegmentrr.h ../inst/include
+	@if [ ! -d ../inst/libs$(R_ARCH) ]; then mkdir -p ../inst/libs$(R_ARCH); fi
+	@cp libsegmentrr.a ../inst/libs$(R_ARCH)
