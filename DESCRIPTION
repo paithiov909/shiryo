@@ -3,10 +3,12 @@ Type: Package
 Title: 'Rcpp' Port of TinySegmenter
 Version: 0.0.0.100
 Authors@R: c(
-    person("Kato", "Akiru", email = "paithiov909@gmail.com", role = c("aut", "cre")))
+    person("Akiru", "Kato", email = "paithiov909@gmail.com", role = c("aut", "cre")),
+    person("Naoki", "Okamura", role = "aut"),
+    person("Taku", "Kudo", role = "crh"))
 Maintainer: Kato Akiru <paithiov909@gmail.com>
 Description: An R package for Japanese text tokenization.
-License: MIT + file LICENSE
+License: MIT + file LICENSE | BSD
 URL: https://github.com/paithiov909/segmentrr
 BugReports: https://github.com/paithiov909/segmentrr
 Encoding: UTF-8
