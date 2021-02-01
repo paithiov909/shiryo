@@ -1,4 +1,4 @@
-CURDIR = $(shell Rscript -e "cat(getwd())")
+CURDIR != Rscript -e "cat(getwd())"
 GOPATH = $(CURDIR)/go
 GOFMT = go fmt
 GOBUILD = go build
@@ -13,7 +13,8 @@ PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1 -DDLL_IMPORT -DSTRICT_R_HEADERS
 all: build copy $(SHLIB)
 
 build:
-	$(GOFMT) github.com/paithiov909/libsegmentrr
+	@rm -f ../inst/include/libsegmentrr.h
+	GOPATH="$(GOPATH)" $(GOFMT) github.com/paithiov909/libsegmentrr
 	GOOS="windows" GOPATH="$(GOPATH)" CXX="$(CXX11)" CGO_ENABLED=1 $(GOBUILD) -o libsegmentrr.a -i -a -x -compiler gc -buildmode=c-archive github.com/paithiov909/libsegmentrr
 
 copy:

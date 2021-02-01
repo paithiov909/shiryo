@@ -1,4 +1,4 @@
-CURDIR = $(shell Rscript -e "cat(getwd())")
+CURDIR != Rscript -e "cat(getwd())"
 GOPATH = $(CURDIR)/go
 GOBUILD = go build
 CXX_STD = CXX11
@@ -12,6 +12,7 @@ all: build copy $(SHLIB)
 
 build:
 	@rm -f ../inst/include/libsegmentrr.h
+	GOPATH="$(GOPATH)" $(GOFMT) github.com/paithiov909/libsegmentrr
 	CXX="$(CXX11)" GOPATH="$(GOPATH)" CGO_ENABLED=1 $(GOBUILD) -o libsegmentrr.a -i -a -x -compiler gc -buildmode=c-archive github.com/paithiov909/libsegmentrr
 
 copy:
