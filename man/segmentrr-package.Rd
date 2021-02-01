@@ -4,11 +4,28 @@
 \name{segmentrr-package}
 \alias{segmentrr}
 \alias{segmentrr-package}
-\title{segmentrr: segmentrr}
+\title{segmentrr: 'Rcpp' Port of TinySegmenter}
 \description{
 \if{html}{\figure{logo.png}{options: align='right' alt='logo' width='120'}}
 
-One paragraph description of what the package does as one or more
-         full sentences.
+An R package for Japanese text tokenization.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/paithiov909/segmentrr}
+  \item Report bugs at \url{https://github.com/paithiov909/segmentrr}
+}
+
+}
+\author{
+\strong{Maintainer}: Akiru Kato \email{paithiov909@gmail.com}
+
+Authors:
+\itemize{
+  \item Naoki Okamura
+  \item Taku Kudo
+}
+
 }
 \keyword{internal}

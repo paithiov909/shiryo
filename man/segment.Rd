@@ -9,7 +9,7 @@ segment(text, ...)
 \arguments{
 \item{text}{character vector}
 
-\item{...}{all other args are passed to \code{jsonlite::toJSON}}
+\item{...}{all other args are passed to \code{jsonlite::fromJSON}}
 }
 \value{
 list
