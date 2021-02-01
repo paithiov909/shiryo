@@ -1,4 +1,4 @@
-name: R-Cgo
+name: R-CMD-build
 
 on:
   push:

@@ -11,6 +11,8 @@ knitr::opts_chunk$set(
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
+
+escaped <- enc2utf8(paste(c("\u8033\u3092\u3059\u307e\u305b\u3070", "\u805e\u3053\u3048\u3066\u304f\u308b\u3088", "\u541b\u306e\u3068\u306a\u308a", "\u76ee\u3068\u9f3b\u306e\u5148")))
 ```
 
 # segmentrr <img src='https://raw.githack.com/paithiov909/segmentrr/master/man/figures/logo.png' align="right" height="139" />
@@ -23,14 +25,16 @@ knitr::opts_chunk$set(
 ## System Requirements
 
 - GNU make
-- C++
+- GNU GCC
 - Go
+- C++11
 
 ## Usage
 
 ```{r usage}
 # remotes::install_github("paithiov909/segmentrr")
-segmentrr::segment(c("耳をすませば", "聞こえてくるよ", "君のとなり　目と鼻の先"))
+print(escaped)
+segmentrr::segment(escaped)
 ```
 
 ## License
