@@ -8,7 +8,7 @@ title : gibasa（日本語テキスト分析のためのRパッケージ）の�
 
 あきる（paithiov909）
 
-![bg right fit](qrcode_github.com.png)
+![bg right fit](figure/qrcode_github.com.png)
 
 ---
 
@@ -120,7 +120,7 @@ res |>
 ## gibasaの速さについて (1/2)
 
 ```r
-rmecab <- \() {
+rmecab <- \() { ## RMeCab v1.0.7
   purrr::imap_dfr(
     audubon::polano[5:800],
     ~ data.frame(
@@ -129,24 +129,26 @@ rmecab <- \() {
     )
   )
 }
-rcppmecab1 <- \() {
+rcppmecab1 <- \() { ## junhewk/RcppMeCab v0.0.1.3-2
   purrr::imap_dfr(
     RcppMeCab::posParallel(audubon::polano[5:800], join = FALSE),
     ~ data.frame(doc_id = .y, token = unname(.x), POS1 = names(.x))
   )
 }
 rcppmecab2 <- \() { RcppMeCab::posParallel(audubon::polano[5:800], format = "data.frame") }
-gibasa <- \() { gibasa::gbs_tokenize(audubon::polano[5:800]) }
+gibasa <- \() { ## paithiov909/gibasa v0.3.0
+  gibasa::gbs_tokenize(audubon::polano[5:800]) |>  gibasa::prettify(col_select = "POS1")
+}
 ```
 
 ---
 
 ## gibasaの速さについて (2/2)
 
-- 少なくともdoc_idとtoken、POS1列を含むtidy textを得たい場合、gibasaが特にすごく速いといったことはない
-- それ以外の列もほしい場合なら、これでも十分実用に耐えるくらいの速さだと思う
+- 条件にもよるが、少なくともdoc_idとtoken、POS1列を含むtidy textを得たい場合では、RcppMeCabと変わらないくらい
+- それ以外の列もほしい場合なら、十分実用に耐えるくらいの速さ
 
-![bg right fit](figure/unnamed-chunk-3-1.png)
+![bg right fit](figure/bench.png)
 
 ---
 
@@ -162,5 +164,4 @@ tidy text（data frame of tokens）のかたちのデータフレームがほし
 ## おわり
 
 試してみてね！
-
 
