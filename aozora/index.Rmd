@@ -282,7 +282,7 @@ res <-
 df |>
   dplyr::filter(doc_id %in% quanteda::docid(test)) |> 
   dplyr::mutate(pred = dplyr::if_else(doc_id %in% res, "太宰治", "芥川竜之介")) |>
-  dplyr::select(author, pred) |>
+  dplyr::select(pred, author) |>
   table()
 ```
 
