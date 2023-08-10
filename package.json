@@ -1,0 +1,13 @@
+{
+  "name": "shiryo",
+  "version": "1.0.0",
+  "description": "&copy; 2023 paithiov909. コードはMITライセンスとします。",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "paithiov909",
+  "license": "MIT",
+  "devDependencies": {
+    "@marp-team/marp-cli": "^3.2.0"
+  }
+}

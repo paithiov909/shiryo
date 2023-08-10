@@ -1,1 +1,1 @@
-&copy; 2022 paithiov909. コードはMITライセンスとします。
+&copy; 2023 paithiov909. コードはMITライセンスとします。

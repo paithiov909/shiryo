@@ -157,11 +157,10 @@ gibasa <- \() { ## paithiov909/gibasa v0.3.0
 tidy text（data frame of tokens）のかたちのデータフレームがほしくて、次にあてはまるとき
 
 1. RMeCabの関数では返されない素性情報が必要な場合
-2. IPA辞書以外の辞書（[UniDic](https://ccd.ninjal.ac.jp/unidic/), [CC-CEDICT](https://github.com/ueda-keisuke/CC-CEDICT-MeCab), [mekab-ko-dic](https://bitbucket.org/eunjeon/mecab-ko-dic/src/master/)）を使いたい場合
+2. IPA辞書以外の辞書（[UniDic](https://ccd.ninjal.ac.jp/unidic/), [CC-CEDICT](https://github.com/ueda-keisuke/CC-CEDICT-MeCab), [mecab-ko-dic](https://bitbucket.org/eunjeon/mecab-ko-dic/src/master/)）を使いたい場合
 
 ---
 
 ## おわり
 
 試してみてね！
-

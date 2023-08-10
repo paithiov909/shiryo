@@ -43,3 +43,5 @@ _bookdown_files/
 *.bin
 *.vec
 *.bpe
+
+/node_modules/
