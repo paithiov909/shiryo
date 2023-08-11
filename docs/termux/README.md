@@ -79,7 +79,7 @@ $ proot-distro login debian --isolated # rootでログインする
 
 # $ proot-distro login debian --isolated --user <ユーザー名> # ユーザーを作ってからはこっち
 # $ proot-distro reset debian # Linux環境のリセット
-# $ proot-distro uninstall debian # Linux環境の削除
+# $ proot-distro remove debian # Linux環境の削除
 ```
 
 * LinuxディストリビューションはUbuntuなども選べる
