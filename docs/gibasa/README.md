@@ -1,7 +1,7 @@
 ---
 theme: gaia
 paginate: true
-title : gibasa（日本語テキスト分析のためのRパッケージ）の紹介
+title: gibasa（日本語テキスト分析のためのRパッケージ）の紹介
 ---
 
 # gibasa（日本語テキスト分析のためのRパッケージ）の紹介
