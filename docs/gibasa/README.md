@@ -1,7 +1,9 @@
 ---
+marp: true
 theme: gaia
 paginate: true
 title: gibasa（日本語テキスト分析のためのRパッケージ）の紹介
+image: https://paithiov909.github.io/shiryo/gibasa/figure/og-image.png
 ---
 
 # gibasa（日本語テキスト分析のためのRパッケージ）の紹介

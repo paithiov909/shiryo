@@ -1,8 +1,10 @@
 ---
+marp: true
 paginate: true
 transition: explode
 title: Androidスマホの中でRを動かす
-marp: true
+description: Termuxアプリの中でproot-distroを使うことによって、Rをスマホの中で動かします
+image: https://paithiov909.github.io/shiryo/termux/figure/og-image.png
 ---
 
 # Androidスマホの中でRを動かす
