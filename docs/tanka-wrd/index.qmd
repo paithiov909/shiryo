@@ -1,0 +1,201 @@
+---
+title: "WRDによる「詩的度」の定量的評価の試み"
+author: "shinabitanori"
+format:
+  html:
+    code-fold: true
+    embed-resources: true
+---
+
+## これは何？
+
+次の記事に引用されている72首の短歌について、適当な位置で区切った前後のまとまりのあいだのWRD（Word Rotator's Distance）を計算し、値の傾向を調べた。
+
+> [▼存在しない何かへの憧れ──工藤吉生ブログ:いま若手歌人たちはどんな短歌をつくっているのか【25人72首】](http://blog.livedoor.jp/mk7911/archives/52227365.html)
+
+WRDというのは、「超球面上での最適輸送に基づく文類似性尺度」である。WRDについての詳しい紹介はここではしないが、この非類似性尺度は、単語列とその埋め込み表現があれば計算できるため、比較的簡単に計算できるメリットがある。
+
+```{r}
+#| echo: false
+suppressPackageStartupMessages({
+  require(ggplot2)
+})
+tanka <- arrow::read_parquet("tanka72-wrd.parquet")
+tweets <- arrow::read_parquet("shinabitanori-wrd.parquet")
+```
+
+## 詳しい方法
+
+上のブログ記事に掲載されている短歌を収集し、それぞれの短歌について、次のようなRの関数を用いて、前後2つの区切りになるようにまとめあげた。
+
+```{r}
+strj_split_boundaries <- \(x) {
+  stringi::stri_split_boundaries(
+    x,
+    opts_brkiter = stringi::stri_opts_brkiter(
+      locale = "ja@lw=phrase;ld=auto"
+    )
+  )
+}
+split_kugire <- \(x) {
+  strj_split_boundaries(x) |>
+    purrr::map(\(elem) {
+      len <- length(elem)
+      if (len < 2) {
+        return(NA_character_)
+      } else {
+        sapply(seq_len(len - 1), \(i) {
+          s1 <- paste0(elem[1:i], collapse = "")
+          s2 <- paste0(elem[(i+1):len], collapse = "")
+          paste(s1, s2, sep = "\t")
+        })
+      }
+    }) |>
+    unlist()
+}
+
+split_kugire(
+  c("新しい朝が来た", "希望の朝だ")
+)
+```
+
+このスクリプトは、stringiパッケージ（v1.8.3, ICU 74.1がバンドルされている）を使って、日本語文字列を「文節をまたがずに分割することが可能と考えられる位置で、前後2つの部分に分割する」ものである。多くの場合では、「文節をまたがずに分割することが可能と考えられる位置」は複数あるため、ひとつの入力文に対して、複数の分割パターンが得られる。
+
+こうして得た前後2つのまとまりのそれぞれについて、Sudachi（+SudachiDict-core 20240109）を使って形態素解析をおこない、得られる2つの単語列間のWRDを計算した。
+
+WRDの計算には[apportita](https://github.com/paithiov909/apportita)パッケージと、[chiVe](https://github.com/WorksApplications/chiVe)の「chive-1.2-mc90.magnitude」という単語ベクトルを使った。
+
+## 計算の結果
+
+### 5字以上の分割パターンにおけるWRD
+
+分割した前後のまとまりのうち、どちらか片方が極端に短いペアでは、分割がうまくできていないパターンであることが多そうだった。
+
+そこで、前後の部分のそれぞれが5字以上である分割パターンのみを抽出したテーブルを掲載する。なお、文字列の処理の都合上、句読点や記号類は削除したため、以下の図表中に掲載している短歌は元の短歌作品と表記が異なる場合がある。
+
+```{r}
+#| echo: false
+tanka |>
+  dplyr::filter(
+    stringr::str_length(s1) > 4,
+    stringr::str_length(s2) > 4
+  ) |>
+  dplyr::transmute(
+    id = id,
+    wrd = round(wrd, digits = 3),
+    text = paste(s1, s2, sep = "／"),
+    author = author
+  ) |>
+  dplyr::arrange(desc(wrd)) |>
+  reactable::reactable(
+    striped = TRUE,
+    searchable = TRUE,
+    filterable = TRUE
+  )
+```
+
+充分に大きな言語資源で学習された結果にもとづく文の非類似性尺度は、与えた「文」の文脈がかけ離れているほどに、その値が大きくなると考えられる。
+
+今回の分析では、適当な位置で区切った前後のまとまりをそれぞれ「文」と見なしてWRDを計算していることから、「／」の前後で文脈がかけ離れていると捉えられるほど、WRDの値が大きくなる。WRDは\(0, 1\)の値の範囲になるように正規化されているため、1に近いほど2つの「文」の意味的な隔たりが大きいと解釈できる。また、まったく同じ文字列を与えた場合には値は0になる。
+
+### WRDの分布
+
+このWRDのばらつきが短歌作品に特有のものなのかは明らかでない。そこで、短歌と比較できるように、筆者の過去のツイートについて、短歌と同じくらいの長さと考えられる文字列をサンプリングしたデータを同様に処理し、その結果とともに、WRDの分布を描いた。
+
+```{r}
+#| echo: false
+tanka |>
+  dplyr::select(s1, s2, wrd) |>
+  dplyr::mutate(source = "tanka") |>
+  dplyr::bind_rows(
+    tweets |>
+      dplyr::select(s1, s2, wrd) |>
+      dplyr::mutate(source = "tweet")
+  ) |>
+  dplyr::mutate(
+    source = factor(source, labels = c("短歌\n(n=559)", "ツイート\n(n=533)"))
+  ) |>
+  ggpubr::ggdensity(x = "wrd", color = "source") +
+  labs(title = "WRDの分布")
+```
+
+```{r}
+#| echo: false
+tanka |>
+  dplyr::select(s1, s2, wrd) |>
+  dplyr::mutate(source = "tanka") |>
+  dplyr::bind_rows(
+    tweets |>
+      dplyr::select(s1, s2, wrd) |>
+      dplyr::mutate(source = "tweet")
+  ) |>
+  dplyr::mutate(
+    source = factor(source, labels = c("短歌\n(n=418)", "ツイート\n(n=358)"))
+  ) |>
+  dplyr::filter(
+    stringr::str_length(s1) > 4,
+    stringr::str_length(s2) > 4
+  ) |>
+  ggpubr::ggdensity(x = "wrd", color = "source") +
+  labs(title = "WRDの分布 (各まとまりが5字以上のもの)")
+```
+
+このグラフを見るかぎりでは、同じくらいの長さの文字列では短歌でもツイートでも似たような分布になっているように見える。
+
+### 作者ごとのWRDの分布
+
+作者ごとにWRDの分布を描きつつ、作品ごとにもっともWRDの値が大きくなった位置に破線を引いた。見づらいが、句の終わりに名詞が置かれている分割パターンでは、WRDが比較的高くなっているらしいことがわかる。
+
+```{r}
+#| echo: false
+#| fig-cap: "作者名の後ろの数字はデータセットに含まれるその作者による作品の数"
+g <- tanka |>
+  dplyr::filter(
+    stringr::str_length(s1) > 4,
+    stringr::str_length(s2) > 4
+  ) |>
+  dplyr::transmute(
+    id = id,
+    wrd = wrd,
+    text = paste(s1, s2, sep = "／"),
+    author = author
+  ) |>
+  dplyr::group_by(author) |>
+  dplyr::mutate(
+    author = paste(as.character(author), length(unique(id)), sep = "/")
+  ) |>
+  dplyr::ungroup() |>
+  ggpubr::ggdensity(
+    x = "wrd", color = "author",
+    rug = TRUE, alpha = .5
+  )
+
+g +
+  geomtextpath::geom_textvline(
+    aes(xintercept = wrd, label = text, colour = author),
+    data = \(x) dplyr::slice_max(x, wrd, by = id),
+    size = 3, linetype = "dashed", alpha = .6
+  ) +
+  coord_flip() +
+  scale_color_viridis_d(option = "H") + 
+  theme_light()
+```
+
+次のグラフは作者ごとの分布だけをインタラクティブに確認できるようにしたもの。作者名をシングルクリックで分布を表示する・しないを選択できる。また、作者名をダブルクリックで、その作者の分布だけを表示できる。
+
+```{r}
+#| echo: false
+plotly::ggplotly(g)
+```
+
+## むすび
+
+今回の分析のモチベーションとして、短歌作品の「詩的度」を定量的に評価しうる指標のひとつとして、文の非類似性尺度を利用できないか検討したかったという点がある。
+
+短歌は、しばしば前後2つの部分から構成されており、上の句と下の句とのあいだに「句切れ」があるとされるつくりのものがある。また、そうした作品では、上の句と下の句とのあいだに意味的な飛躍がある場合があり、そうした意味的な飛躍から得られる詩的効果を指して、「詩的飛躍」という言い方をすることもある。
+
+こうした詩的効果はよく話題に上るものである一方で、そもそも意味的な飛躍とはどのようなものか、どんな意味の隔たりがどのような詩的効果を生むのかについては、当然ながらよくわかっていない部分が多い。また、短歌作品の「句切れ」をどのように同定するかは読み手によって異なってしまう面があることからも、そうした「詩的飛躍」を生じる表現については、管見のかぎり、あまり客観的に論じられていない。
+
+もちろん、今回の分析で得た分割パターンは必ずしも「句切れ」に相当するものではない。また、ICUの実装による文節区切りは、与える文によってはしばしば不自然な結果を返すことから、意味的な切れ目としてはおかしな分割パターンだったらしいケースも散見された。しかし、今回の分析では「文節をまたがずに分割することが可能と考えられる」すべての分割パターンについてWRDを計算したことから、人手によって「句切れ」を同定するのに比べて、かえって属人的でない分析がおこなえたものと考えられる。
+
+また、WRDという尺度によって、意味的な隔たりを定量的に確認できる意義も大きいと考えられる。もちろん、短歌作品の「詩的度」が、前後2つに分割したまとまりのあいだの意味的な隔たりとして評価できる側面のものばかりでないだろうことは言うまでもないが、ある表現の「詩的度」を文の非類似尺度によって捉える試みは、ひとつの議論の足がかりとして有用だと考える。
