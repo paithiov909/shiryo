@@ -1,0 +1,291 @@
+---
+title: "Rを使って短歌の「詩的度」を測る"
+author: "paithiov909"
+date: "2023-06-01"
+date-format: long
+lang: ja
+format:
+  revealjs:
+    transition: fade
+    slide-number: "c/t"
+    overview: true
+    chalkboard: false
+    progress: true
+    history: false
+    theme: [default, slides.scss]
+    include-in-header: header.html
+    embed-resources: true
+---
+
+## 誰？
+
+::::{.columns}
+:::{.column width="30%" class="py-12"}
+![](https://rawcdn.githack.com/paithiov909/paithiov909/f5342cd61b45e29c34b17fc11c9bc1766eacb441/avatar.jpg){class="w-64 h-64 rounded-full"}
+:::
+:::{.column width="70%"}
+- [paithiov909](https://github.com/paithiov909)というアカウントでインターネットしている
+- Rパッケージをつくったりしている<br />[gibasa](https://github.com/paithiov909/gibasa/), [audubon](https://github.com/paithiov909/audubon/), [apportita](https://github.com/paithiov909/apportita/)
+- 短歌をつくったり読んだりするのにはまっていた（過去形）
+:::
+::::
+
+## どっちが「詩的」に見える？
+
+:::: {.columns}
+
+::: {.column}
+> 水星をのぞむ明け方　コンビニのＦＡＸに「故障中」の張り紙
+>
+> （五島諭『緑の祠』）
+
+> ２月５日夜のコンビニ　暴力を含めてバランスを取る世界
+>
+> （永井祐『日本の中でたのしく暮らす』）
+:::
+
+::: {.column}
+- 短歌は、しばしば前後2つの部分から構成されている（「句切れ」がある）
+- そうした作品では、上句と下句とのあいだに意味的な飛躍がある場合がある
+- ***「詩的」に感じられる「飛躍」とはどんなものだろうか？***
+:::
+
+::::
+
+
+## アイデア
+
+:::: {.columns}
+::: {.column}
+> ラスボスの手前でセーブするように無意味に入るファミリーマート
+
+> 水槽にさかなを容れて飼うようにたぶんこのまま付かない既読
+
+:::
+::: {.column}
+- 「詩的」のひとつの捉え方<br />***＝巧みな比喩的表現^[比喩的表現：同一言語内でよく見られる共起をあえて逸脱する表現によって、そのものごとについての新しい側面を言い表そうとする表現]が用いられている***
+- 逸脱的な共起がなされている＝前後の意味的な隔たりが大きい場合、その表現は「詩的」だと期待できる
+:::
+::::
+
+## モチベーション
+
+- 前後2つの文（単語列）のあいだの意味的な隔たりを定量的に評価できたらうれしい
+  - 単語列間の非類似度（距離）を計算すればよさそう
+  - 非類似度を計算するために、まず、単語列をその意味が反映されたベクトル表現にすることを考える
+
+## 自然言語処理における埋め込み
+
+単語や文などを、それらの意味を表現するベクトル空間にマッピングする手法、そうした手法で得られるベクトル表現のことを ***埋め込み（embeddings）*** という
+
+- 似た意味の語彙はベクトル空間のなかでも「近い」位置に写像される、「意味の演算」が可能であるといった特徴がある
+- 今回は[chiVe](https://github.com/WorksApplications/chiVe)という単語埋め込みを使いつつ、単語列間の ***WRD*** を計算することによって「単語列間の非類似度」を得る
+
+## 注意点
+
+- 最近は埋め込みを得られるLLMを使って、文脈が考慮された（＝動的な）文ベクトルを直接得ることが多い
+  - OpenAIだと text-embedding-3-small とか text-embedding-3-large を使う
+- 今回紹介するような「静的な単語埋め込みから文の埋め込み表現を得る」手法は、やり方としてはすでに古い
+  - しかし、今回のように大量のマイクロテキストの埋め込みを得る必要がある場合、OpenAIを利用すると相応のAPI利用料がかかりそうなため、それは避けたい
+
+## Word Rotator's Distance {auto-animate="true"}
+
+- 2つの文ベクトル（単語ベクトルを縦に積み上げたもの）のあいだの最適輸送を考える
+  - 各単語の重み（確率変量）として、各単語ベクトルのL2ノルムを正規化したものを使う
+  - このとき、輸送コストとして、単語ベクトル間のコサイン距離^[負値をとらないように、1からコサイン類似度を引いて変換した値のことを「コサイン距離」という]を使う
+- 詳しくは [[2004.15003] Word Rotator's Distance](https://arxiv.org/abs/2004.15003) を読んでください
+
+## Word Rotator's Distance {auto-animate="true"}
+
+- 超球面上にある各点（単語）の重みについて、対応する文の各点の重みへと過不足のないように移し替えるような対応づけ（回転）を考える
+- このとき、回転にかかる輸送コストを、2つの点がベクトル空間のなかでなす角が小さいほど小さく・大きいほど大きくなるように設定し、実際に回転をしたときにかかるコストの総和が最小になるような対応づけを見つける（最適輸送問題を解く）
+- 得られたコストの総和の最小値を２つの文の非類似度とする
+
+## Word Rotator's Distance {auto-animate="true"}
+
+輸送コスト（costm）は距離行列なので Wasserstein距離としてWRDを計算できる（p=1）
+
+```{r wasserstein}
+#| echo: true
+#| code-fold: true
+s1 <- runif(6 * 6) |> matrix(6, 6) |> scale(center = FALSE)
+s2 <- runif(4 * 6) |> matrix(4, 6) |> scale(center = FALSE)
+# コサイン距離
+d <- 1 - proxyC::simil(s1, s2, method = "cosine", use_nan = FALSE)
+w1 <- (\() { x <- sqrt(rowSums(s1^2)); x / sum(x) })()
+w2 <- (\() { x <- sqrt(rowSums(s2^2)); x / sum(x) })()
+transport::wasserstein(w1, w2, p = 1, costm = d, prob = TRUE)
+```
+
+\begin{align}\begin{aligned}W_p(a,b)=(\min_{\gamma \in \mathbb{R}_+^{m\times n}} \sum_{i,j}\gamma_{i,j}\|x_i-y_j\|_p)^\frac{1}{p}\\s.t. \gamma 1 = a; \gamma^T 1= b; \gamma\geq 0\end{aligned}\end{align}
+
+## WRDを計算してみる{auto-animate="true"}
+
+全角スペースで区切る場合、五島の短歌のほうが前後の非類似度が大きい
+
+```{r wrd_func}
+#| echo: true
+#| code-fold: true
+require(apportita)
+sudachi <- sudachir::rebuild_tokenizer(mode = "A")
+form <- \(x) {
+  unlist(sudachir::form(x, type = "normalized", pos = FALSE, instance = sudachi))
+}
+wrd <- \(conn, s1, s2) {
+  purrr::map2_dbl(s1, s2, \(chunk1, chunk2) {
+    chunk1 <- form(chunk1)
+    chunk2 <- form(chunk2)
+    tryCatch(
+      apportita::calc_wrd(conn, chunk1, chunk2),
+      error = \(e) {
+        NA
+      }
+    )
+  }, .progress = FALSE)
+}
+conn <- magnitude("chive-1.1-mc90-aunit.magnitude")
+```
+
+```{r wrd1}
+#| echo: true
+#| code-fold: false
+# 五島の短歌
+wrd(conn, "水星をのぞむ明け方", "コンビニのＦＡＸに「故障中」の張り紙")
+# 永井の短歌
+wrd(conn, "２月５日夜のコンビニ", "暴力を含めてバランスを取る世界")
+```
+
+## WRDを計算してみる{auto-animate="true"}
+
+一方で、こういうのだと、区切る位置によってWRDの値が変わってしまう。どうすればいい？
+
+```{r wrd2}
+#| echo: true
+#| code-fold: false
+wrd(conn, "ラスボスの手前でセーブするように", "無意味に入るファミリーマート")
+wrd(conn, "ラスボスの手前でセーブするように無意味に入る", "ファミリーマート")
+```
+
+## 短歌を機械的に区切る{auto-animate="true"}
+
+短歌を人手で2つの文に区切るのではなく、可能なすべての区切りについてWRDを計算し、それらの代表値をその短歌における前後の非類似度とする
+
+```{r split_func}
+#| echo: true
+#| code-fold: true
+strj_split_boundaries <- \(x) {
+  stringi::stri_split_boundaries(
+    x, # ICU>=73.2でビルドしたstringiが必要
+    opts_brkiter = stringi::stri_opts_brkiter(
+      locale = "ja@lw=phrase;ld=auto" # auto | loose | normal | strict | anywhere
+    )
+  )
+}
+split_kugire <- \(x) {
+  strj_split_boundaries(x) |>
+    purrr::map(\(elem) {
+      len <- length(elem)
+      if (len < 2) {
+        return(NA_character_)
+      } else {
+        sapply(seq_len(len - 1), \(i) {
+          s1 <- paste0(elem[1:i], collapse = "")
+          s2 <- paste0(elem[(i + 1):len], collapse = "")
+          paste(s1, s2, sep = "\t")
+        })
+      }
+    })
+}
+```
+
+```{r split_example}
+#| echo: true
+#| code-fold: true
+split_kugire("水槽にさかなを容れて飼うようにたぶんこのまま付かない既読")
+```
+
+## 短歌を機械的に区切る{auto-animate="true"}
+
+##### ふつうにWRDを集計した場合{class="pt-6 pl-3"}
+
+```{r wrd3}
+dat <- tibble::tibble(
+  text = c(
+    "水星をのぞむ明け方コンビニのFAXに「故障中」の張り紙",
+    "2月5日夜のコンビニ暴力を含めてバランスを取る世界",
+    "ラスボスの手前でセーブするように無意味に入るファミリーマート",
+    "水槽にさかなを容れて飼うようにたぶんこのまま付かない既読"
+  ),
+  doc_id = factor(1:4, labels = text)
+)
+ret <- dat |>
+  dplyr::reframe(
+    doc_id = doc_id,
+    phrase = split_kugire(text),
+    .by = doc_id
+  ) |>
+  tidyr::separate_wider_delim(
+    phrase, delim = "\t", names = c("s1", "s2")
+  ) |>
+  dplyr::mutate(wrd = wrd(conn, s1, s2))
+
+ret |>
+  dplyr::summarise(
+    `max` = max(wrd),
+    `median` = median(wrd),
+    `mean` = mean(wrd),
+    `min` = min(wrd),
+    `n` = dplyr::n(),
+    .by = doc_id
+  )
+```
+
+##### 前後ともに5文字以上のペアだけにしぼった場合{class="pt-8 pl-3"}
+
+```{r wrd4}
+ret |>
+  dplyr::filter(
+    stringr::str_length(s1) > 4,
+    stringr::str_length(s2) > 4
+  ) |>
+  dplyr::summarise(
+    `max` = max(wrd),
+    `median` = median(wrd),
+    `mean` = mean(wrd),
+    `min` = min(wrd),
+    `n` = dplyr::n(),
+    .by = doc_id
+  )
+```
+
+## 前後のWRDが大きい短歌
+
+体言止めの短歌は前後のWRDが大きくなりやすい傾向がありそう？
+<!-- TODO: グラフ -->
+
+## 前後のWRDが小さい短歌
+
+同じような語句を繰り返し用いている短歌では、前後のWRDが小さくなりやすい
+<!-- TODO: グラフ -->
+
+## WRDの分布
+
+<!-- TODO: グラフ -->
+
+## まとめ
+
+:::{.incremental}
+- 短歌の「詩的度」の一側面を測れそうな尺度として、短歌を前後2つに機械的に区切った「文」のあいだのWRDを計算した
+- 評価用データセットのようなものはないので評価できないが、感覚的には悪くない尺度に思われた
+- WRDは計算に時間がかかるので、短歌がたくさんあると大変
+- この方法で計算したWRDは、値が大きく・小さくなりやすいつくりに癖がありそうなので、短歌の「詩的度」を測るには別の観点も必要かも
+:::
+
+:::{.center}
+## Enjoy✨{class="text-center"}
+:::
+
+```{r close_conn}
+#| echo: false
+close(conn)
+```

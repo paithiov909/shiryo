@@ -43,5 +43,6 @@ _bookdown_files/
 *.bin
 *.vec
 *.bpe
+*.magnitude
 
 /node_modules/
