@@ -1,7 +1,7 @@
 ---
 title: "Rを使って短歌の「詩的度」を測る"
 author: "paithiov909"
-date: "2023-06-01"
+date: "2023-02-24"
 date-format: long
 lang: ja
 format:
@@ -32,9 +32,9 @@ format:
 
 ## どっちが「詩的」に見える？
 
-:::: {.columns}
+::::{.columns}
 
-::: {.column}
+:::{.column}
 > 水星をのぞむ明け方　コンビニのＦＡＸに「故障中」の張り紙
 >
 > （五島諭『緑の祠』）
@@ -44,7 +44,7 @@ format:
 > （永井祐『日本の中でたのしく暮らす』）
 :::
 
-::: {.column}
+:::{.column}
 - 短歌は、しばしば前後2つの部分から構成されている（「句切れ」がある）
 - そうした作品では、上句と下句とのあいだに意味的な飛躍がある場合がある
 - ***「詩的」に感じられる「飛躍」とはどんなものだろうか？***
@@ -55,14 +55,14 @@ format:
 
 ## アイデア
 
-:::: {.columns}
-::: {.column}
+::::{.columns}
+:::{.column}
 > ラスボスの手前でセーブするように無意味に入るファミリーマート
 
 > 水槽にさかなを容れて飼うようにたぶんこのまま付かない既読
 
 :::
-::: {.column}
+:::{.column}
 - 「詩的」のひとつの捉え方<br />***＝巧みな比喩的表現^[比喩的表現：同一言語内でよく見られる共起をあえて逸脱する表現によって、そのものごとについての新しい側面を言い表そうとする表現]が用いられている***
 - 逸脱的な共起がなされている＝前後の意味的な隔たりが大きい場合、その表現は「詩的」だと期待できる
 :::
@@ -199,8 +199,7 @@ split_kugire <- \(x) {
 ```
 
 ```{r split_example}
-#| echo: true
-#| code-fold: true
+#| echo: false
 split_kugire("水槽にさかなを容れて飼うようにたぶんこのまま付かない既読")
 ```
 
@@ -221,7 +220,7 @@ dat <- tibble::tibble(
 ret <- dat |>
   dplyr::reframe(
     doc_id = doc_id,
-    phrase = split_kugire(text),
+    phrase = unlist(split_kugire(text)),
     .by = doc_id
   ) |>
   tidyr::separate_wider_delim(
@@ -240,7 +239,7 @@ ret |>
   )
 ```
 
-##### 前後ともに5文字以上のペアだけにしぼった場合{class="pt-8 pl-3"}
+##### 前後ともに5文字以上あるペアだけにしぼった場合{class="pt-8 pl-3"}
 
 ```{r wrd4}
 ret |>
@@ -258,25 +257,143 @@ ret |>
   )
 ```
 
-## 前後のWRDが大きい短歌
+## 前後のWRDが大きい区切り方
 
-体言止めの短歌は前後のWRDが大きくなりやすい傾向がありそう？
-<!-- TODO: グラフ -->
+字数のある名詞句があったりして前後の語数に偏りがあると、WRDが大きくなってしまう
 
-## 前後のWRDが小さい短歌
+```{r tanka72}
+#| echo: false
+dat <-
+  arrow::read_parquet("tanka72-wrd.parquet") |>
+  dplyr::as_tibble() |>
+  dplyr::filter(
+    stringr::str_length(s1) > 4,
+    stringr::str_length(s2) > 4
+  )
+```
+
+```{r max3}
+#| echo: false
+dat |>
+  dplyr::transmute(
+    wrd = round(wrd, 3),
+    text = paste(s1, s2, sep = "／"),
+    author = author
+  ) |>
+  dplyr::slice_max(wrd, n = 3) |>
+  knitr::kable()
+```
+
+## 前後のWRDが小さい区切り方
 
 同じような語句を繰り返し用いている短歌では、前後のWRDが小さくなりやすい
-<!-- TODO: グラフ -->
 
-## WRDの分布
+```{r min3}
+#| echo: false
+dat |>
+  dplyr::transmute(
+    wrd = round(wrd, 3),
+    text = paste(s1, s2, sep = "／"),
+    author = author
+  ) |>
+  dplyr::slice_min(wrd, n = 3) |>
+  knitr::kable()
+```
 
-<!-- TODO: グラフ -->
+## WRDの分布（1）
+
+```{r dist1}
+#| echo: false
+#| fig-cap: "作者名の後ろの数字はデータセットに含まれるその作者による作品の数"
+require(ggplot2)
+
+g <- dat |>
+  dplyr::transmute(
+    id = id,
+    wrd = wrd,
+    text = paste(s1, s2, sep = "／"),
+    author = author
+  ) |>
+  dplyr::group_by(author) |>
+  dplyr::mutate(
+    author = paste(as.character(author), length(unique(id)), sep = "/")
+  ) |>
+  dplyr::ungroup() |>
+  ggpubr::ggdensity(
+    x = "wrd", color = "author",
+    rug = TRUE, alpha = .5
+  )
+
+g +
+  geomtextpath::geom_textvline(
+    aes(xintercept = wrd, label = text, colour = author),
+    data = \(x) dplyr::slice_max(x, wrd, n = 10),
+    size = 3, linetype = "dashed", alpha = .6
+  ) +
+  coord_flip() +
+  scale_color_viridis_d(option = "H") +
+  theme_light()
+```
+
+## WRDの分布（2）
+
+```{r dist2}
+#| echo: false
+require(patchwork)
+
+tanka <-
+  arrow::read_parquet("tanka-wrd.parquet") |>
+  dplyr::as_tibble() |>
+  dplyr::filter(
+    stringr::str_length(s1) > 4, stringr::str_length(s2) > 4
+  )
+tweets <- arrow::read_parquet("shinabitanori-wrd.parquet")
+
+n_tanka <- nrow(tanka)
+n_tweets <- nrow(tweets)
+
+dat <- tanka |>
+  dplyr::mutate(source = "tanka") |>
+  dplyr::bind_rows(
+    tweets |>
+      dplyr::select(s1, s2, wrd) |>
+      dplyr::mutate(source = "tweet")
+  ) |>
+  dplyr::mutate(
+    source = factor(
+      source,
+      labels = c(
+        paste0("短歌\n(n=", n_tanka, ")"),
+        paste0("ツイート\n(n=", n_tweets, ")")
+      )
+    )
+  )
+
+g1 <-
+  ggpubr::ggdensity(dat, x = "wrd", color = "source") +
+  labs(title = "短歌とツイートの分布の比較") +
+  scale_color_viridis_d(option = "H") +
+  theme_light() +
+  theme(legend.position = "bottom")
+
+g2 <- tanka |>
+  dplyr::summarise(
+    wrd = max(wrd),
+    .by = id
+  ) |>
+  ggpubr::ggdensity(x = "wrd") +
+  labs(title = "WRDの最大値 (n=74844)") +
+  scale_color_viridis_d(option = "H") +
+  theme_light()
+
+g1 + g2
+```
 
 ## まとめ
 
 :::{.incremental}
 - 短歌の「詩的度」の一側面を測れそうな尺度として、短歌を前後2つに機械的に区切った「文」のあいだのWRDを計算した
-- 評価用データセットのようなものはないので評価できないが、感覚的には悪くない尺度に思われた
+- 評価用データセットのようなものはないので客観的に評価できないが、感覚的には悪くない尺度に思われた
 - WRDは計算に時間がかかるので、短歌がたくさんあると大変
 - この方法で計算したWRDは、値が大きく・小さくなりやすいつくりに癖がありそうなので、短歌の「詩的度」を測るには別の観点も必要かも
 :::

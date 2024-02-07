@@ -46,3 +46,4 @@ _bookdown_files/
 *.magnitude
 
 /node_modules/
+*wrd.parquet
