@@ -1,7 +1,7 @@
 {
   "name": "shiryo",
   "version": "1.0.0",
-  "description": "&copy; 2023 paithiov909. コードはMITライセンスとします。",
+  "description": "&copy; 2024 paithiov909. コードはMITライセンスとします。",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

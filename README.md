@@ -1,6 +1,6 @@
 # shiryo
 
-&copy; 2023 paithiov909. コードはMITライセンスとします。
+&copy; 2024 paithiov909. コードはMITライセンスとします。
 
 ---
 
