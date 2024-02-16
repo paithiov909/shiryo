@@ -159,7 +159,7 @@ query(conn, c("新しい", "朝", "が", "来た"))
 
 ## Word Rotator's Distance（3） {auto-animate="true"}
 
-輸送コスト（costm）は距離行列なので Wasserstein距離^[数式は[POTのドキュメント](https://pythonot.github.io/quickstart.html#computing-wasserstein-distance)から] としてWRDを計算できる（p=1）
+輸送コスト（costm）は距離行列なのでWasserstein距離^[数式は[POTのドキュメント](https://pythonot.github.io/quickstart.html#computing-wasserstein-distance)から]としてWRDを計算できる（p=1）
 
 ```{r wasserstein}
 #| echo: true
