@@ -1,0 +1,11 @@
+/*-- scss:rules --*/
+#title-slide {
+  word-boundary-detection: auto(ja);
+  word-break: auto-phrase;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+  width: 16rem;
+  height: 16rem;
+}
