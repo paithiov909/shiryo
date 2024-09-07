@@ -12,6 +12,7 @@ format:
     progress: true
     history: false
     theme: [default, custom.scss]
+    include-in-header: header.html
     embed-resources: false
     link-external-newwindow: true
 knitr:
