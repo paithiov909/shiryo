@@ -2,6 +2,8 @@
 title: "Rによる天気予報風のグラフ表現"
 subtitle: "3D棒グラフ＋地図の例"
 author: "あきる（paithiov909）"
+date: "2024-10-19"
+date-format: long
 lang: ja
 format:
   aesthetic-revealjs:
@@ -15,6 +17,11 @@ format:
     include-in-header: header.html
     embed-resources: false
     link-external-newwindow: true
+    pointer:
+      color: "#FA7785"
+      pointerSize: 24
+revealjs-plugins:
+  - pointer
 knitr:
   opts_chunk:
     tidy: "styler"
@@ -45,21 +52,21 @@ knitr:
 
 ### バテてたら夏は終わっていた
 
-:::{.aesthetic-windows-95-container-indent}
+:::{.aesthetic-windows-95-container-indent .fragment .fade-up}
 [この夏にやったこと：]{.aesthetic-pepsi-cola-color}
 
-- WebRをTauri v2アプリの中で使ってみる
+- [WebR](https://docs.r-wasm.org/webr/latest/)を[Tauri v2](https://tauri.app/)アプリの中で使ってみる
   - [paithiov909/bnbkchagama: [WIP] Attempt to use WebR in Tauri v2 app](https://github.com/paithiov909/bnbkchagama)
-- Positronをさわってみる
+- [Positron](https://github.com/posit-dev/positron)をさわってみる
 - 冷房の効いた部屋でソシャゲ
 :::
 
 ## 台風すごかった🌀
 
 :::{layout-ncol=2}
-![](tenki-1.webp)
+![](tenki-1.webp){.fragment .fade-up}
 
-![](tenki-2.webp)
+![](tenki-2.webp){.fragment .fade-up}
 :::
 
 [画像：[台風10号まとめ　記録的な大雨・暴風　秋も台風の発生しやすい状況続く　動向に注意(気象予報士 吉田　友海 2024年09月02日) - 日本気象協会 tenki.jp](https://tenki.jp/forecaster/t_yoshida/2024/09/02/30414.html)]{style="font-size: 0.8em;"}
@@ -72,25 +79,25 @@ knitr:
 
 ## 具体的に🥅
 
-### 積算降水量の3D棒グラフ
+### 積算降水量の3D棒グラフ＋地図を描く
 
 :::{.aesthetic-windows-95-container-indent}
-- 直近48時間の積算降水量（48時間降水量）の棒グラフ
-  - 地図上で観測地点がある位置に3Dの棒グラフを描く
+- [直近48時間の積算降水量（48時間降水量）のグラフ]{.aesthetic-pepsi-cola-color}
+  - 3D表現（Z=0のXY平面上に地図を描き、Z軸方向に垂直に棒グラフを生やす）
+  - 地図上で観測地点がある位置に棒グラフを描く
   - 棒は降水量で階級に分けて色をつける
-  - 3Dなので、地図を傾けているとそれっぽい
 :::
 
 ## どうやって❓
 
 ### 実はExcelでできるのだが…
 
-:::{.aesthetic-windows-95-container-indent}
+:::{.aesthetic-windows-95-container-indent .fragment .fade-up}
 - CSVデータが[気象庁｜最新の気象データ](https://www.data.jma.go.jp/stats/data/mdrr/pre_rct/index24_rct.html)あたりから取得できる
   - [jmastats](https://uribo.github.io/jmastats/index.html)パッケージで行けそうだが、ここでは手動でDLしておいた
-- 地図の表現には[Mapbox](https://www.mapbox.com/)というJSライブラリを使う
+- 地図の表現には[Mapbox GL JS](https://www.mapbox.com/)というライブラリを使う
   - Rからは[mapboxer](https://crazycapivara.github.io/mapboxer/index.html)というパッケージとして利用できる
-  - ggplot2やplotlyでも地図なら描けるが、地図のZ軸方向に棒グラフを立てる表現がとても難しい
+  - ggplot2（[rayshader](https://github.com/tylermorganwall/rayshader)、[ggrgl](https://github.com/coolbutuseless/ggrgl)など？）やplotlyでも地図は描けるが、地図のZ軸方向に棒グラフを立てる表現が難しい
 :::
 
 ## 降水量の色分け🚥
@@ -98,9 +105,9 @@ knitr:
 とりあえず適当に色分けする関数を用意しておく。
 この関数の戻り値は`#RRGGBB`という形のカラーコード
 
-```{r val2pal}
+```{r val2colcode}
 #| echo: true
-val2pal <- \(val) {
+val2colcode <- \(val) {
   dplyr::case_when(
     val >= 300 ~ "purple",
     dplyr::between(val, 200, 300) ~ "red",
@@ -116,7 +123,7 @@ val2pal <- \(val) {
 }
 ```
 
-## データの整形🔨
+## データの整形1🔨
 
 `jmastats::stations`と結合して観測地点の座標を付けておく
 
@@ -143,7 +150,7 @@ pre48h <-
 ```
 
 
-## データの整形🔨
+## データの整形2🔨
 
 それぞれの観測地点に対応する棒グラフそのものを地物（POLYGON）として用意する。ここでは、観測地点を`sf::st_buffer`で広げる
 
@@ -154,12 +161,12 @@ pre48h <- pre48h |>
   dplyr::mutate(
     station_name_label = station_name_label,
     height = val * 600, # 地物の高さ。ここでは適当に`600`をかけておく
-    colour = val2pal(val), # さっきの色分け関数
+    colour = val2colcode(val), # さっきの色分け関数
     geometry = geometry,
     .keep = "used"
   ) |>
   sf::st_as_sf() |> # `sf`に変換しなおす
-  sf::st_buffer(1000) # 棒グラフになるPOLYGONをつくる
+  sf::st_buffer(4000) # 棒グラフになるPOLYGONをつくる
 ```
 
 ## データの確認🔎
@@ -170,7 +177,7 @@ pre48h <- pre48h |>
 pre48h
 ```
 
-## 地点ごとデータの地図表現🗾
+## ggplot2での地図表現🗾
 
 これを素直にggplot2で描画すると、観測地点が全国各地に散らばっているようすを確認できる
 
@@ -182,7 +189,7 @@ library(ggplot2)
 
 gp <- ggplot(pre48h) +
   geom_sf(aes(fill = factor(colour))) +
-  theme_light() +
+  theme_grey() +
   labs(title = "点の色は指定したものとは違うよ！")
 
 gp
@@ -226,17 +233,16 @@ gp +
   labs(
     title = "東海道新幹線の停車駅",
     caption = paste(
-      "出典：国土数値情報（行政区域データ、鉄道データ）（国土交通省）",
-      "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-v3_0.html",
+      "出典：国土数値情報（鉄道データ）（国土交通省）",
       "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-v2_3.html",
       sep = "\n"
     )
   )
 ```
 
-## Mapboxとは🎁
+## Mapbox GL JSとは🎁
 
-```{r map-demo}
+```{r map-demo-1}
 #| echo: true
 #| code-fold: true
 library(mapboxer)
@@ -247,7 +253,8 @@ jpmap <-
     center = c(140, 40),
     zoom = 3.2,
     pitch = 60.00,
-    bearing = -12.0
+    bearing = -12.0,
+    width = "100%"
   )
 ```
 
@@ -277,7 +284,7 @@ jpmap <- jpmap |>
 
 本来はこんな雰囲気で地図を描画するためのライブラリ
 
-## Mapboxによる地図🎨
+## Mapbox GL JSによる地図🎨
 
 この地図は左クリックでのドラッグでパン、右クリックでのドラッグで回転、ホイールで倍率の変更ができる
 
@@ -288,11 +295,42 @@ jpmap
 
 ## 高さがある地物を描く🗼
 
-Mapboxには、地図にグラフを重ねることができる特別な機能があるわけではないが、[fill-extrusion](https://docs.mapbox.com/style-spec/reference/layers/#fill-extrusion)というレイヤーとして追加することで、高さがある地物を描画することができる
+Mapbox GL JSには、地図にグラフを重ねることができる特別な機能があるわけではないが、[fill-extrusion](https://docs.mapbox.com/style-spec/reference/layers/#fill-extrusion)というレイヤーとして追加することで、高さがある地物を描画することができる
 
 ![↑本来はこういった表現をするための機能らしい](layer-fill-extrusion.6492bb9.960.png)
 
-## Mapboxでの3D棒グラフ📊
+## 3D棒グラフ＋地図の表現📊
+
+```{r map-demo-2}
+#| echo: false
+jpmap <-
+  mapboxer::mapboxer(
+    style = basemaps$Carto$voyager,
+    center = c(140, 40),
+    zoom = 3.2,
+    pitch = 60.00,
+    bearing = -12.0,
+    width = "100%"
+  ) |>
+  mapboxer::add_line_layer(
+    id = "tkd_line",
+    source = tkd_line |>
+      mapboxer::as_mapbox_source(),
+    line_color = "#000000",
+    line_opacity = 0.8
+  ) |>
+  mapboxer::add_circle_layer(
+    id = "tkd_station",
+    source = tkd_station |>
+      mapboxer::as_mapbox_source(),
+    circle_color = "#000000",
+    circle_opacity = 0.8
+  ) |>
+  mapboxer::add_tooltips(
+    layer_id = "tkd_station",
+    tooltip = "{{name}}"
+  )
+```
 
 ```{r add-extrusion}
 #| echo: true
@@ -318,7 +356,7 @@ jpmap <- jpmap |>
   )
 ```
 
-```{r add-tooltips}
+```{r view-map-2}
 #| echo: true
 #| code-fold: true
 #| output-location: slide
@@ -336,11 +374,10 @@ jpmap |>
 ### [R]{.aesthetic-pepsi-red-color}で天気予報風のグラフを描けた！！
 
 :::{.aesthetic-windows-95-container-indent}
-- ただし、力技による
-  - Mapboxの`fill-extrusion`を使えば、高さのある地物を表現できる
-- 3D棒グラフ＋地図の表現はかなり大変
-- そもそもこれが見やすい、便利な表現なのかイマイチわからない
-- でも、変な図を描くと[R]{.aesthetic-pepsi-red-color}力の高まりを感じられる
+- ただし、Mapbox GL JSを使う場合は`fill-extrusion`での力技による
+- Rで3D棒グラフ＋地図の表現はなかなか大変
+  - もしかしたら[deckgl](https://github.com/crazycapivara/deckgl)の[ColumnLayer](https://deck.gl/docs/api-reference/layers/column-layer)を使うのが楽かもしれない
+- でも、変な図を自力で描くと[R]{.aesthetic-pepsi-red-color}力の高まりを感じられる
 :::
 
 ---
