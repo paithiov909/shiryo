@@ -39,7 +39,7 @@ knitr:
 :::
 
 :::{.column width="70%"}
-- [paithiov909](https://github.com/paithiov909)というアカウントでインターネットしている
+- あきる（[paithiov909](https://github.com/paithiov909)）というアカウントでインターネットしている
 - Rパッケージをつくったりしている
   - [gibasa: A plain 'Rcpp' wrapper of 'MeCab'](https://github.com/paithiov909/gibasa/)
   - [audubon: An R package for Japanese text processing](https://github.com/paithiov909/audubon)
@@ -57,7 +57,6 @@ knitr:
 
 - [WebR](https://docs.r-wasm.org/webr/latest/)を[Tauri v2](https://tauri.app/)アプリの中で使ってみる
   - [paithiov909/bnbkchagama: [WIP] Attempt to use WebR in Tauri v2 app](https://github.com/paithiov909/bnbkchagama)
-- [Positron](https://github.com/posit-dev/positron)をさわってみる
 - 冷房の効いた部屋でソシャゲ
 :::
 
@@ -105,7 +104,8 @@ knitr:
 とりあえず適当に色分けする関数を用意しておく。
 この関数の戻り値は`#RRGGBB`という形のカラーコード
 
-```{r val2colcode}
+```{r}
+#| label: val2colcode
 #| echo: true
 val2colcode <- \(val) {
   dplyr::case_when(
@@ -117,17 +117,20 @@ val2colcode <- \(val) {
     dplyr::between(val, 1, 50) ~ "cyan",
     .default = "gray"
   ) |>
+    # 実際は7色だけ変換すればよいので、
+    # この書き方は処理としては無駄が多い
     col2rgb() |>
     t() |>
     rgb(maxColorValue = 255)
 }
 ```
 
-## データの整形1🔨
+## データの読み込み📖
 
 `jmastats::stations`と結合して観測地点の座標を付けておく
 
-```{r read_data}
+```{r}
+#| label: read-data
 #| echo: true
 #| code-fold: false
 pre48h <-
@@ -150,11 +153,12 @@ pre48h <-
 ```
 
 
-## データの整形2🔨
+## データの整形🔨
 
 それぞれの観測地点に対応する棒グラフそのものを地物（POLYGON）として用意する。ここでは、観測地点を`sf::st_buffer`で広げる
 
-```{r modify_data}
+```{r}
+#| label: modify-data
 #| echo: true
 #| code-fold: false
 pre48h <- pre48h |>
@@ -171,7 +175,8 @@ pre48h <- pre48h |>
 
 ## データの確認🔎
 
-```{r glimpse_data}
+```{r}
+#| label: check-data
 #| echo: true
 #| code-fold: false
 pre48h
@@ -181,7 +186,8 @@ pre48h
 
 これを素直にggplot2で描画すると、観測地点が全国各地に散らばっているようすを確認できる
 
-```{r plot_stations}
+```{r}
+#| label: plot-stations
 #| echo: true
 #| code-fold: false
 #| output-location: slide
@@ -200,6 +206,7 @@ gp
 [東海道新幹線が運休して大変だった](https://www3.nhk.or.jp/news/html/20240904/k10014571961000.html)らしいので、新幹線の路線図を重ねて描いてみたい。[jprailway](https://github.com/paithiov909/jprailway)という自作パッケージからデータを読み込んでおく
 
 ```{r jprailway}
+#| label: read-jprailway
 #| echo: true
 #| code-fold: false
 # 鉄道区間のsf (LINESTRING)
@@ -222,7 +229,8 @@ tkd_station <- jprailway::stations |>
 
 これは、こんな感じのデータ
 
-```{r plot_tkd}
+```{r}
+#| label: plot-jprailway
 #| echo: true
 #| code-fold: true
 gp +
@@ -242,7 +250,8 @@ gp +
 
 ## Mapbox GL JSとは🎁
 
-```{r map-demo-1}
+```{r}
+#| label: map-demo-1
 #| echo: true
 #| code-fold: true
 library(mapboxer)
@@ -253,12 +262,12 @@ jpmap <-
     center = c(140, 40),
     zoom = 3.2,
     pitch = 60.00,
-    bearing = -12.0,
-    width = "100%"
+    bearing = -12.0
   )
 ```
 
-```{r add-tkdline}
+```{r}
+#| label: map-demo-2
 #| echo: true
 #| code-fold: true
 jpmap <- jpmap |>
@@ -284,11 +293,14 @@ jpmap <- jpmap |>
 
 本来はこんな雰囲気で地図を描画するためのライブラリ
 
+この地図ウィジェットは、左クリックでのドラッグでパン、右クリックでのドラッグで回転、ホイールで倍率の変更ができる
+
 ## Mapbox GL JSによる地図🎨
 
-この地図は左クリックでのドラッグでパン、右クリックでのドラッグで回転、ホイールで倍率の変更ができる
+※ウィジェットの高さや幅が小さい場合、ページを再読込みしてみてください
 
-```{r view-map-1}
+```{r}
+#| label: map-demo-3
 #| echo: false
 jpmap
 ```
@@ -301,7 +313,8 @@ Mapbox GL JSには、地図にグラフを重ねることができる特別な�
 
 ## 3D棒グラフ＋地図の表現📊
 
-```{r map-demo-2}
+```{r}
+#| label: extrusion-demo-1
 #| echo: false
 jpmap <-
   mapboxer::mapboxer(
@@ -309,8 +322,7 @@ jpmap <-
     center = c(140, 40),
     zoom = 3.2,
     pitch = 60.00,
-    bearing = -12.0,
-    width = "100%"
+    bearing = -12.0
   ) |>
   mapboxer::add_line_layer(
     id = "tkd_line",
@@ -332,7 +344,8 @@ jpmap <-
   )
 ```
 
-```{r add-extrusion}
+```{r}
+#| label: extrusion-demo-2
 #| echo: true
 #| code-fold: true
 jpmap <- jpmap |>
@@ -356,7 +369,8 @@ jpmap <- jpmap |>
   )
 ```
 
-```{r view-map-2}
+```{r}
+#| label: extrusion-demo-3
 #| echo: true
 #| code-fold: true
 #| output-location: slide
@@ -388,7 +402,8 @@ jpmap |>
 </div>
 ```
 
-```{r hexfont}
+```{r}
+#| label: hexfont
 #| echo: false
 fonts <- hexfont::unifont(
   jp = TRUE,
