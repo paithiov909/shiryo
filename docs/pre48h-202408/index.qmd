@@ -233,6 +233,7 @@ tkd_station <- jprailway::stations |>
 #| label: plot-jprailway
 #| echo: true
 #| code-fold: true
+#| output-location: default
 gp +
   geom_sf(data = tkd_line) +
   geom_point(aes(x = lng, y = lat), data = tkd_station) +
