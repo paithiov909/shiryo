@@ -2,23 +2,30 @@
     "name": "${localWorkspaceFolderBasename}",
     "build": {
         "dockerfile": "Dockerfile",
-        "args": { "VARIANT": "4" }
+        "args": {
+            "VARIANT": "4"
+        }
     },
     "features": {
-        "ghcr.io/devcontainers-contrib/features/volta:1": {},
-        "ghcr.io/rocker-org/devcontainer-features/r-rig:1": {
-            "version": "none",
-            "installRadian": true,
-            "installVscDebugger": false
-        },
-        "ghcr.io/rocker-org/devcontainer-features/r-packages:1": {
-            "packages": "microbenchmark,reprex,devtools,usethis",
-            "installSystemRequirements": true,
-            "additionalRepositories": "paithiov909 = 'https://paithiov909.r-universe.dev'"
-        },
-        "ghcr.io/rocker-org/devcontainer-features/quarto-cli:1": {}
+        "ghcr.io/devcontainers/features/node:1": {}
+    },
+    "containerEnv": {
+        "MECABRC": "/usr/local/etc/.mecabrc",
+        "R_HISTSIZE": "200"
     },
     "remoteEnv": {
-        "MECABRC": "/usr/local/etc/mecabrc"
+        "WAKATIME_API_KEY": "${localEnv:WAKATIME_API_KEY}"
+    },
+    "forwardPorts": [8787],
+    "portsAttributes": {
+		"8787": {
+			"label": "Rstudio",
+			"requireLocalPort": true,
+			"onAutoForward": "ignore"
+		}
+    },
+    "postAttachCommand": {
+        "rstudio": "sudo rstudio-server start",
+        "mecabrc": "cp ${MECABRC} ~"
     }
 }
