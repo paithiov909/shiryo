@@ -1,0 +1,655 @@
+---
+title: "Rで麻雀を攻略する"
+subtitle: "麻雀のデータをtidyに扱えるRパッケージの紹介"
+author: "あきる（paithiov909）"
+lang: ja
+format:
+  revealjs:
+    transition: fade
+    slide-number: "c/t"
+    navigation-mode: vertical
+    overview: true
+    chalkboard: false
+    progress: true
+    history: false
+    theme: [default, custom.scss]
+    include-in-header: header.html
+    embed-resources: true
+    link-external-newwindow: true
+knitr:
+  opts_chunk:
+    tidy: "styler"
+    collapse: true
+    comment: "#>"
+    dev: "ragg_png"
+    dpi: 300
+---
+
+
+# 誰？
+
+:::{.collumns}
+
+:::{.column width="30%"}
+![](https://rawcdn.githack.com/paithiov909/paithiov909/f5342cd61b45e29c34b17fc11c9bc1766eacb441/avatar.jpg){.rounded-full}
+
+::: aside
+音声=VOICEVOX: 春歌ナナ
+:::
+:::
+
+:::{.column width="70%"}
+:::{.incremental}
+- あきる（[paithiov909](https://github.com/paithiov909)）というアカウントでインターネットしている
+- Rパッケージをつくったりしている
+  - 🆕[paithiov909/shikakusphere: Miscellaneous functions for Japanese mahjong](https://github.com/paithiov909/shikakusphere)
+  - 🆕[paithiov909/convlog: Read 'tenhou.net/6' format files into tibbles](https://github.com/paithiov909/convlog)
+:::
+:::
+
+:::
+
+
+
+# TL;DR
+
+:::{.fragment .fade-up}
+1. 麻雀のデータを扱えるRパッケージをつくっている
+2. 「Rっぽい書き方ができること」を重視している
+3. プレイヤーの手牌や、牌譜（対局ログ）をtidyに扱えるとそれっぽい
+:::
+
+
+# 麻雀のデータってどんなの？
+
+:::{.incremental}
+- 麻雀をtidyに扱えると何が嬉しいのか🤔
+:::
+
+## 日本における麻雀
+
+[Japanese Riichi Mahjong](https://en.wikipedia.org/wiki/Japanese_mahjong): 日本で遊ばれているルールの麻雀（不完全情報・ゼロサムゲーム）
+
+:::{.incremental}
+- ふつう4人で遊ぶ
+- 手牌が13枚ある状態から「山から1枚引き、要らない牌を1枚捨てる」などの操作を順番に繰り返し、役を完成させるゲーム
+- そうして持ち点をやりとりしていき、一連のゲームの終了時に持っていた点数で順位をつける
+:::
+
+## 背景
+
+[日本における麻雀は、そこそこ複雑で、競技性の高いゲーム]{.fragment .fade-up}
+
+[→わりと大量の対局ログを扱いたい需要があるらしい]{.fragment .fade-up}
+
+:::{.fragment .fade-up}
+1. プレイヤーの模倣それ自体に関心があるケースもある（麻雀ゲームのAIを開発したい、など）
+2. 「どんな状況で、どんな行動を選択すれば有利か」をデータから明らかにしたいケースも
+:::
+
+## モチベーション
+
+[**状況（特徴量）**を入力として与えたとき、**有利な行動（ラベル）**を返すモデルを学習してみたい]{.fragment .fade-up}
+
+:::{.fragment .fade-up}
+- 状況（特徴量）
+  - ゲームのある時点において「どの牌が、どこに、何枚あるか」
+- 有利な行動（ラベル）
+  - どの牌を切るか／鳴くべきか／立直するか
+:::
+
+
+# 「状況」をどう表現するか
+
+:::{.incremental}
+- 機械学習的には、おもに「**ゲームのある時点において、どの牌が、どこに、何枚あるか**」に関心がある！
+- そのように「状況」を特徴量化できれば、たとえば「この状況において🀄は当たり牌か？」といった予測タスクに帰着できる
+:::
+
+## 麻雀牌の表現
+
+:::{.incremental}
+- 麻雀牌は、牌種（色）が`[mpsz]`の4種類
+- `[mps]`は`1-9`の9ランク、`z`は`1-7`の7ランクあって、それぞれが4枚ずつある
+- つまり、全部で`(3*9+7)*4=136`枚のタイルを用いる
+- `[mps]`の`5`については、4枚中2枚くらいまで「赤牌」に置き換えることも（データとしてはランクを`0`として扱う）
+- これらのほかに「裏向きの牌」を`"_"`で表すことにして、表現としては`z0`に割り当てる
+:::
+
+## 表現とタイルとの対応表{.scrollable}
+
+`m0`, `p0`, `s0`は赤牌
+
+```{=html}
+<table class="responsive hover">
+  <thead>
+    <tr>
+      <th class="text-center"></th>
+      <th class="text-center"><span data-qmd="0"></span></th>
+      <th class="text-center"><span data-qmd="1"></span></th>
+      <th class="text-center"><span data-qmd="2"></span></th>
+      <th class="text-center"><span data-qmd="3"></span></th>
+      <th class="text-center"><span data-qmd="4"></span></th>
+      <th class="text-center"><span data-qmd="5"></span></th>
+      <th class="text-center"><span data-qmd="6"></span></th>
+      <th class="text-center"><span data-qmd="7"></span></th>
+      <th class="text-center"><span data-qmd="8"></span></th>
+      <th class="text-center"><span data-qmd="9"></span></th>
+    </tr>
+  </thead>
+  <tbody class="table-group-divider">
+    <tr>
+      <td class="table-active"><span data-qmd="m"></span></td>
+      <td><span data-qmd="🀋"></span></td>
+      <td><span data-qmd="🀇"></span></td>
+      <td><span data-qmd="🀈"></span></td>
+      <td><span data-qmd="🀉"></span></td>
+      <td><span data-qmd="🀊"></span></td>
+      <td><span data-qmd="🀋"></span></td>
+      <td><span data-qmd="🀌"></span></td>
+      <td><span data-qmd="🀍"></span></td>
+      <td><span data-qmd="🀎"></span></td>
+      <td><span data-qmd="🀏"></span></td>
+    </tr>
+    <tr>
+      <td class="table-active"><span data-qmd="p"></span></td>
+      <td><span data-qmd="🀝"></span></td>
+      <td><span data-qmd="🀙"></span></td>
+      <td><span data-qmd="🀚"></span></td>
+      <td><span data-qmd="🀛"></span></td>
+      <td><span data-qmd="🀜"></span></td>
+      <td><span data-qmd="🀝"></span></td>
+      <td><span data-qmd="🀞"></span></td>
+      <td><span data-qmd="🀟"></span></td>
+      <td><span data-qmd="🀠"></span></td>
+      <td><span data-qmd="🀡"></span></td>
+    </tr>
+    <tr>
+      <td class="table-active"><span data-qmd="s"></span></td>
+      <td><span data-qmd="🀔"></span></td>
+      <td><span data-qmd="🀐"></span></td>
+      <td><span data-qmd="🀑"></span></td>
+      <td><span data-qmd="🀒"></span></td>
+      <td><span data-qmd="🀓"></span></td>
+      <td><span data-qmd="🀔"></span></td>
+      <td><span data-qmd="🀕"></span></td>
+      <td><span data-qmd="🀖"></span></td>
+      <td><span data-qmd="🀗"></span></td>
+      <td><span data-qmd="🀘"></span></td>
+    </tr>
+    <tr>
+      <td class="table-active"><span data-qmd="z"></span></td>
+      <td><span data-qmd="🀫"></span></td>
+      <td><span data-qmd="🀀"></span></td>
+      <td><span data-qmd="🀁"></span></td>
+      <td><span data-qmd="🀂"></span></td>
+      <td><span data-qmd="🀃"></span></td>
+      <td><span data-qmd="🀆"></span></td>
+      <td><span data-qmd="🀅"></span></td>
+      <td><span data-qmd="🀄"></span></td>
+      <td></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+```
+
+## 強化学習したい場合{.scrollable}
+
+> 牌種をチャンネルとして、牌を9(数値または字牌の種類)×4(牌数)の2次元の面で表した、畳み込みニューラルネットワークで構成する^[[麻雀AIを深層強化学習で作る その２(特徴量設計) - TadaoYamaokaの開発日記](https://tadaoyamaoka.hatenablog.com/entry/2023/10/09/233816) より]
+
+:::{.fragment .fade-in}
+次のようなarrayを用意するということ
+
+| | 1| 2| 3| 4| 5| 6| 7| 8| 9|
+|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| n1 | 1| 0| 1| 1| 1| 1| 0| 0| 0|
+| n2 | 1| 0| 0| 0| 0| 1| 0| 0| 0|
+| n3 | 1| 0| 0| 0| 0| 0| 0| 0| 0|
+| n4 | 0| 0| 0| 0| 0| 0| 0| 0| 0|
+:::
+
+
+## 教師あり学習したい場合{.scrollable}
+
+たとえば、次のような特徴量（テーブルデータ）をつくる^[[麻雀の危険牌を予測する part1 \~解釈性を添えて\~ - Paoのテックブログ](https://pao2.hatenablog.com/entry/2020/08/17/215353) より]
+
+:::{.fragment .fade-up}
+- 場況情報（各プレイヤーの点棒、場風、自風、本場、ドラ等）
+- 見えている牌の情報（それぞれの牌が場に何枚見えているか）
+- 立直プレイヤーの捨て牌情報
+  - 各牌を何枚ずつ切っているか
+  - 各色（萬子/筒子/索子）、字牌の割合（全体と６巡目まで）
+  - 最初の6巡でヤオチュウ牌（字牌と1,9）以外の割合、4,5,6の割合
+  - 各色で最初に切った牌、２番目に切った牌、およびその数字の差
+  - 各色で最後に切った牌、最後から２番目に切った牌、およびその数字の差
+  - 立直宣言牌、およびその色
+  - 各筋を切っているかどうか（1-4萬, 2-5萬, ....., 6-9ソウ）
+  - 各色で最初/最後に切った3つの牌を3桁の数字で表現（3ピン→9ピン→4ピンなら394）
+:::
+
+
+# 麻雀牌をtidyに扱う
+
+:::{.incremental}
+- 教師あり学習のケースは、Rでも真似できそう
+- 同じような特徴量をつくるケースを念頭に「Rっぽい書き方」ができるような機能を実装したい！
+:::
+
+## Tidy Data
+
+:::{.fragment .fade-in-then-semi-out}
+> Tidy datasets are easy to manipulate, model and visualize, and have a specific structure: each variable is a column, each observation is a row, and each type of observational unit is a table.
+>
+> Hadley Wickham (2014). [Tidy data](https://vita.had.co.nz/papers/tidy-data.html). <br /> ***The Journal of Statistical Software, 59***.
+:::
+
+[Rではこれを扱うための枠組みが非常に強力なため、データを縦長のデータフレームとして持てるようにすると、「**Rっぽい書き方**」に着地させやすい]{.fragment .fade-up}
+
+
+## 麻雀牌のTidy Data表現
+
+麻雀牌をTidy Dataにする場合:
+
+1. [列（variable）:]{.fragment .semi-fade-out fragment-index=1} [**どの牌が、どこに、何枚あるか**]{.fragment .fade-up fragment-index=1}
+2. [行（observation）:]{.fragment .semi-fade-out fragment-index=2} [**牌の観測**]{.fragment .fade-up fragment-index=2}
+3. [テーブル（observational unit）:]{.fragment .semi-fade-out fragment-index=3} [**ゲームのある時点において**]{.fragment .fade-up fragment-index=3}
+
+## つまりこんな感じ
+
+```{r}
+#| label: tiles-data-examples
+#| echo: false
+tibble::tribble(
+  ~`牌種`, ~`場所ID`, ~`枚数`,
+  "p2", 1, 3,
+  "s3", 1, 1,
+  "s4", 1, 1,
+  "s5", 1, 1,
+  "z1", 1, 3,
+  "z2", 1, 3,
+  "z3", 1, 1
+) |>
+  knitr::kable()
+```
+
+## Tidy Dataと他の表現{auto-animate="true"}
+
+それぞれの牌が何枚かずつで一組になっていることを表せる形式であれば、データとしての意味は保ったまま、いくつかの表現ができる
+
+:::{.incremental}
+1. `"p222s345z1112223"`
+2. `c("p2", "p2", "p2", "s3", "s4", "s5", "z1", "z1", "z1", "z2", "z2", "z2", "z3")`
+3. Tidy Data
+:::
+
+# shikakusphereでの扱い{auto-animate="true"}
+
+1. `"p222s345z1112223"`
+2. `c("p2", "p2", "p2", "s3", "s4", "s5", "z1", "z1", "z1", "z2", "z2", "z2", "z3")`
+3. Tidy Data
+
+→これらの表現のあいだで変換できたら便利そう
+
+## `paistr()`
+
+手牌など、牌のまとまりを表現するための独自S3クラス
+
+```{r}
+#| label: paistr-paistr
+#| echo: true
+library(shikakusphere)
+(hands <-
+  paistr(
+    c("p222345z234567",
+      "p11222345z12345",
+      "m055z7z7,m78-9,z5555,z666=",
+      "m055z77,m78-9,z5555,z666=,",
+      "m123p055s789z1117*")
+  )
+)
+```
+
+## `tidy(<skksph_paistr>)`
+
+1→3の変換（ただし、副露か純手牌かの情報は保持しない）
+
+```{r}
+#| label: paistr-tidy
+#| echo: true
+(hands <- tidy(hands))
+```
+
+## `lineup()`
+
+3→2の変換
+
+```{r}
+#| label: paistr-lineup
+#| echo: true
+(hands <- lineup(hands))
+```
+
+## `lipai()`
+
+2→1の変換（`tidy()`を経由しているため、元のかたちに戻るわけではない）
+
+```{r}
+#| label: paistr-lipai
+#| echo: true
+(hands <- lipai(hands))
+```
+
+
+# 牌譜をtidyに扱う
+
+:::{.incremental}
+- Tidy Dataでは、観測の出現順には必ずしも意味がない
+  - 順序に意味を持たせたい場合、観測の順序を表す列をつくっておき、`dplyr::arannge()`で並べ替えできるようにしておく
+- 手牌は含まれる牌の順序によらず、同じ意味（並べ方によって役が変わったりはしない）
+- しかし、自摸や捨て牌では何巡目の自摸・捨て牌だったかに意味があるため、順序を表す列がほしい
+:::
+
+## 牌譜のデータ形式1
+
+いくつかの形式があるが、[天鳳のJSON形式](https://tenhou.net/6/)がおそらくもっとも一般的
+
+:::{.fragment .fade-up}
+- 本場ごとに1つのオブジェクト（各局・プレイヤーごとに配牌・自摸・打牌が配列として格納されている）
+- 自摸・打牌はプレイヤーごとにまとめられているため、プレイヤー内での順序はわかる
+- しかし、本場内における順序はよくわからない（基本的には起家から反時計回りに進むはずだが、副露があると順序が前後するため、パースする際に復元する必要あり）
+:::
+
+## 牌譜のデータ形式2
+
+[Mjai Event JSON](https://github.com/Cryolite/mjai)というのもある
+
+:::{.fragment .fade-up}
+- [Mjai](https://github.com/gimite/mjai)で使われていた形式
+- 自摸・打牌・副露などのイベントをそれぞれオブジェクトとして、それらの配列を持つ（イベントの順序が保持されている）
+- 天鳳JSONからMjai Event JSONへの変換は[Equim-chan/mjai-reviewer](https://github.com/Equim-chan/mjai-reviewer)に含まれているRust crateで可能
+:::
+
+## Mjai Event JSONの例
+
+[savvy](https://github.com/yutannihilation/savvy)を使って書いたRラッパーでtibbleにしたデータの例
+
+```{r}
+#| label: paifu-data-examples
+#| echo: true
+json <- list.files(
+  system.file("testdata/", package = "convlog"),
+  pattern = "*.json$",
+  full.names = TRUE
+)
+(dat <- convlog::read_tenhou6(json))
+```
+
+
+# 実践：特徴量をつくる
+
+:::{.incremental}
+- 牌譜をデータとして読み込めれば、いろいろと加工できる
+- ここでは試しに、リーチ宣言があった本場について、各本場で1つ目のリーチ直後の時点において「見えている牌」を集計してみる
+:::
+
+## 関心があるイベントだけ残す
+
+まずはじめに、リーチ宣言があった本場について、各本場で1つ目のリーチ直後の打牌までを残す
+
+```{r}
+#| label: paifu-date-filter
+#| echo: true
+paifu <-
+  dat[["paifu"]] |>
+  dplyr::filter(
+    # ここでは、ゲームの進行にかかわるイベントだけを残す
+    type %in% c("tsumo", "dahai", "chi", "pon", "daiminkan", "kakan", "ankan", "reach")
+  ) |>
+  dplyr::filter(
+    any(type == "reach"),
+    # リーチ宣言は`tsumo->reach->dahai`の順なので
+    # 次のようにすると、各本場で最初のリーチ直後の`dahai`までを取れる
+    (dplyr::lag(type, default = "") == "reach") |>
+      dplyr::consecutive_id() <= 2,
+    .by = c(game_id, round_id)
+  ) |>
+  dplyr::mutate(pai = trans_tile(pai))
+
+paifu
+```
+
+## 打牌を集計する
+
+その時点までの打牌（捨て牌）は全員から見えるので、ふつうに集計すればよい
+
+```{r}
+#| label: paifu-data-summary-dapai
+#| echo: true
+summary_dapai <-
+  paifu |>
+  dplyr::filter(type == "dahai") |>
+  dplyr::summarize(n = dplyr::n(), .by = c(game_id, round_id, pai)) |>
+  dplyr::mutate(
+    tile = factor(pai, levels = shikakusphere::tiles[["cmajiang"]]),
+    .keep = "unused"
+  )
+
+summary_dapai
+```
+
+## 手牌を集計する1{auto-animate="true"}
+
+手牌は自分のものだけ見えるはずなので、どのプレイヤー視点かを決めてから集計する
+
+ここでは、リーチした人の下家（右隣）の手牌について集計してみる
+
+## 手牌を集計する2{auto-animate="true"}
+
+まず先に、各本場におけるプレイヤーの配牌をtibbleにまとめておく
+
+```{r}
+#| label: paifu-data-collect-qipai
+#| echo: true
+qipai <-
+  dat[["round_info"]] |>
+  dplyr::rowwise() |>
+  dplyr::reframe(
+    game_id = game_id,
+    round_id = round_id,
+    actor = 0:3,
+    tehais
+  ) |>
+  dplyr::group_by(game_id, round_id, actor) |>
+  dplyr::mutate(qipai = list(trans_tile(as.character(tehais))), .keep = "unused") |>
+  dplyr::ungroup()
+
+qipai
+```
+
+## 手牌を集計する3{auto-animate="true"}
+
+次に、リーチしたプレイヤーの下家をまとめあげて……
+
+```{r}
+#| label: paifu-data-pov
+#| echo: true
+pov <- dplyr::filter(paifu, type == "reach") |>
+  dplyr::select(game_id, round_id, actor) |>
+  # プレイヤーのid [0...3] は反時計回りに振られている（0の下家は1, 対面は2, 上家が3）
+  dplyr::mutate(shimocha = (actor + 1) %% 4, .keep = "unused")
+
+pov
+```
+
+## 手牌を集計する4{auto-animate="true"}
+
+次のようにすると、その時点における下家の手牌を再現できる
+
+```{r}
+#| label: paifu-data-summary-shoupai-1
+#| echo: true
+shoupai <- paifu |>
+  dplyr::left_join(pov, by = dplyr::join_by(game_id, round_id)) |>
+  dplyr::filter(actor == shimocha) |>
+  dplyr::summarize(
+    zimo = list(pai[which(type %in% c("tsumo", "chi", "pon", "daiminkan"))]),
+    dapai = list(pai[which(type %in% c("dahai", "kakan", "ankan"))]),
+    .by = c(game_id, round_id, actor)
+  ) |>
+  dplyr::left_join(qipai, by = dplyr::join_by(game_id, round_id, actor)) |>
+  dplyr::reframe(
+    game_id = game_id,
+    round_id = round_id,
+    player = actor,
+    last_state = proceed(qipai, zimo, dapai) # この関数で手牌を再現する
+  )
+
+shoupai
+```
+
+## 手牌を集計する5{auto-animate="true"}
+
+後は、ふつうに集計すればよい
+
+```{r}
+#| label: paifu-data-summary-shoupai-2
+#| echo: true
+summary_shoupai <- shoupai |>
+  dplyr::reframe(
+    tidy(last_state),
+    .by = c(game_id, round_id, player)
+  ) |>
+  dplyr::select(!c(player, id))
+
+summary_shoupai
+```
+
+## 副露を集計する
+
+副露は全員から見えるので、ふつうに集計できる。実際の副露メンツを表す文字列をつくるのがポイント
+
+```{r}
+#| label: paifu-data-summary-fulou
+#| echo: true
+summary_fulou <- paifu |>
+  dplyr::group_by(game_id, round_id, actor) |>
+  dplyr::mutate(
+    # `mjai_conv()`で副露メンツを表す文字列をつくれる
+    pai = mjai_conv(type, pai, consumed, mjai_target(actor, target))
+  ) |>
+  dplyr::group_by(game_id, round_id) |>
+  dplyr::filter(type %in% c("chi", "pon", "daiminkan", "ankan", "kakan")) |>
+  dplyr::summarize(pai = paste0(pai, collapse = ",") |> paistr(), .groups = "keep") |>
+  dplyr::reframe(tidy(pai)) |>
+  dplyr::select(!id)
+
+summary_fulou
+```
+
+## Tidy Dataを横に展開する
+
+集計した縦長のデータを横長に展開する
+
+```{r}
+#| label: paifu-data-pivot-wider
+#| echo: true
+feat <- list(dapai = summary_dapai, shoupai = summary_shoupai, fulou = summary_fulou) |>
+  purrr::imap(\(tbl, name) {
+    dplyr::mutate(tbl,
+      where = name,
+      tile = forcats::fct_drop(tile, only = "_") # 裏向きの牌を表す水準"_"をdropする
+    )
+  }) |>
+  purrr::list_rbind() |>
+  tidyr::pivot_wider(
+    id_cols = c(game_id, round_id),
+    names_from = c(where, tile),
+    names_expand = TRUE,
+    values_from = n,
+    values_fill = 0
+  )
+
+feat
+```
+
+
+# 実践：ラベルをつくる
+
+:::{.incremental}
+- 実際にどういうラベルを用意するかは、モデルの学習のさせ方による
+- いずれにせよ、リーチしたプレイヤーの手牌について、**当たり牌**が何かを調べる必要がありそう
+:::
+
+## リーチした人を集める
+
+まず、リーチしたプレイヤーをまとめる
+
+```{r}
+#| label: paifu-label-who-reaches
+#| echo: true
+reach_player <- paifu |>
+  dplyr::filter(type == "reach") |>
+  dplyr::mutate(who_reaches = actor, .keep = "unused") |>
+  dplyr::select(game_id, round_id, who_reaches)
+
+reach_player
+```
+
+## 当たり牌を調べる
+
+そして、リーチしたプレイヤーの手牌を再現し、それらの当たり牌を調べる
+
+```{r}
+#| label: paifu-label-collect-tingpai
+#| echo: true
+label <- paifu |>
+  dplyr::left_join(reach_player, by = dplyr::join_by(game_id, round_id)) |>
+  dplyr::filter(actor == who_reaches) |>
+  dplyr::summarize(
+    zimo = list(pai[which(type %in% c("tsumo", "chi", "pon", "daiminkan"))]),
+    dapai = list(pai[which(type %in% c("dahai", "kakan", "ankan"))]),
+    .by = c(game_id, round_id, actor)
+  ) |>
+  dplyr::left_join(qipai, by = dplyr::join_by(game_id, round_id, actor)) |>
+  dplyr::reframe(
+    game_id = game_id,
+    round_id = round_id,
+    player = actor,
+    last_state = proceed(qipai, zimo, dapai)
+  ) |>
+  # `collect_tingpai()`で当たり牌を集められる
+  dplyr::mutate(atari_pai = collect_tingpai(last_state)) |>
+  tidyr::unnest_longer(atari_pai)
+
+label
+```
+
+## 特徴量と組み合わせる
+
+たとえば「`s2`は当たり牌か」のみを2値で予測するモデルを学習したいなら、次のようにすればよい
+
+```{r}
+#| label: paifu-label-bind
+#| echo: true
+dplyr::left_join(
+  dplyr::summarize(label,
+    label = ("s2" %in% atari_pai),
+    .by = c(game_id, round_id)
+  ),
+  feat,
+  by = dplyr::join_by(game_id, round_id)
+)
+```
+
+
+# まとめ
+
+:::{.incremental}
+- 麻雀のデータを「Rっぽい書き方」で扱えるパッケージをつくった
+- プレイヤーの手牌や牌譜をtidyに扱うようにすると、体験がよい
+- このRパッケージを使って、Rで麻雀を攻略しよう！
+:::
+
+
+# Enjoy✨{.center}

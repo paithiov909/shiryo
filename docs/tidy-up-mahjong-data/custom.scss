@@ -1,0 +1,17 @@
+/*-- scss:defaults --*/
+$font-family-sans-serif: 'BIZ UDPGothic', sans-serif;
+$body-bg: rgb(248 250 252);
+$body-color: rgb(55 65 81);
+$selection-bg: rgb(30 41 59);
+
+/*-- scss:rules --*/
+#title-slide {
+  word-boundary-detection: auto(ja);
+  word-break: auto-phrase;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+  width: 16rem;
+  height: 16rem;
+}
