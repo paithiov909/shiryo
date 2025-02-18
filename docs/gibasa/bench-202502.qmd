@@ -1,0 +1,383 @@
+---
+title: "Rでの日本語形態素解析事情 2025年2月"
+format: gfm
+knitr:
+  opts_chunk:
+    tidy: "styler"
+    collapse: true
+    comment: "#>"
+    dev: "ragg_png"
+    dpi: 300
+    fig.path: "figure/"
+---
+
+## この文章について
+
+`RMeCab::docDF()`は、文章中の単語について、これ一つでいろいろな数え方ができる便利な関数だ。一方で、雑に使ってしまうと処理に異常に時間がかかったり、MeCabの機嫌によってRセッションごと爆発したりもする、扱いづらい関数でもある。
+
+ここでは、まず、`docDF()`を雑に使った場合に異常に時間がかかる理由について説明したうえで、`minFreq`を十分に大きめに設定すれば、そうした事態は回避できることを紹介する。一方で、`docDF()`は、そもそも抽出した単語をフィルタするための閾値をさまざまに調整しながら使う用途には向いておらず、そういうことをしたい場合、解析速度の面からも、gibasaなど別の形態素解析の手段を使ったほうがよいことを説明する。
+
+
+## 戻り値がデカすぎる問題
+
+というわけで、まず、`RMecab::docDF()`を雑に使った場合に異常に時間がかかる理由について説明する。ここでは`docDF()`に雑に与えたときに、そこそこ異常に時間がかかるだろう日本語コーパスの例として、livedoorニュースコーパスを読み込んでおく。
+
+このコーパスは[ldccr](https://github.com/paithiov909/ldccr)というパッケージを使って、次のように簡単に読み込める。
+
+```{r}
+#| label: load-dat
+dat <-
+  ldccr::read_ldnws(exdir = tempdir(), include_title = FALSE) |>
+  dplyr::mutate(
+    doc_id = ldccr::sqids(),
+    title = stringi::stri_trans_nfkc(title),
+    text = stringi::stri_trans_nfkc(body)
+  ) |>
+  dplyr::select(doc_id, category, title, text)
+
+dat
+```
+
+このコーパスは、本来は9カテゴリの文書分類タスクを試すためのもので、コーパス全体としては7,367文書のブログ記事が収録されている。文章量としては1,000字前後のものが多い。
+
+```{r}
+#| label: bench-202502-summary
+#| fig-alt: summary
+library(ggplot2)
+dat |>
+  dplyr::mutate(n_char = stringr::str_count(text)) |>
+  ggplot(aes(x = n_char, color = category)) +
+  geom_density() +
+  scale_x_log10() +
+  theme_light()
+```
+
+このコーパスを読み込んだデータフレームの（Rのオブジェクトとしての）メモリ上でのサイズは25MBくらい。もちろん、これらの記事の中身を全部読もうとするとかなりつらいだろうし、そういう意味でこれはけっして少ない量ではないのだが、しかし、こんなのは余裕でメモリに載る程度なので、大規模というほどではない。
+
+```{r}
+#| label: objsize-1
+lobstr::obj_sizes(dplyr::pull(dat, text))
+```
+
+実際、これくらいの規模の文章集合だったら、ただ形態素解析するだけであれば、手元の環境だとgibasaで数秒でできる。
+
+```{r}
+#| label: bench-tokenize-gibasa
+microbenchmark::microbenchmark(
+  gibasa = {
+    toks <- gibasa::tokenize(dat, text, doc_id)
+  },
+  times = 1
+)
+toks
+```
+
+IPA辞書で解析したところ、延べ語数は4,767,480語だった。これを適当に数えあげて、文書単語行列をつくってみよう。
+
+```{r}
+#| label: objsize-2
+dtm <- toks |>
+  dplyr::count(doc_id, token) |>
+  tidytext::cast_sparse(doc_id, token, n)
+
+dim(dtm)
+lobstr::obj_sizes(dtm)
+```
+
+7,367文書×74,318語の行列になった。疎行列オブジェクトとして持つ場合、データとして格納される数値の数は縦長のカウントデータのときと変わらない。この文書単語行列のメモリ上でのサイズは28MBほどであり、これもサイズとしては全然小さい。
+
+一方で、7,000文書×70,000語の行列をふつうの密なオブジェクトとして持とうとした場合、それだけで3.92GBになる。
+
+```{r}
+#| label: objsize-3
+lobstr::obj_sizes(numeric(7000 * 70000))
+gc()
+```
+
+ちなみに、Rでは、行列と同じだけの要素をデータフレームとして持とうとすると、一般にさらに余分にメモリを消費する。7,000行×70,000列くらいの大きさのデータフレームとなると、まあメモリには載るかもしれないが、できればつくりたいものではない。
+
+```{r}
+#| label: objsize-4
+lobstr::obj_sizes(
+  matrix(0, nrow = 100, ncol = 1000),
+  # この持ち方はよくない
+  as.data.frame(matrix(0, nrow = 100, ncol = 1000)),
+  # Rのデータフレームは列指向なので、列方向に長くもつほうが容量を小さくできる
+  as.data.frame(t(matrix(0, nrow = 100, ncol = 1000)))
+)
+gc()
+```
+
+`RMeCab::docDF()`は、単語文書行列をデータフレームとして返そうとするが、たとえば今回のデータについて雑に使ってしまうと、70,000×7,000みたいな規模のデータフレーム（少なくとも3.92GBくらいにはなるはず！）をつくろうとしてしまう。これが`docDF()`を雑に使ったときに異常に遅くなる主な原因であり、`docDF()`を使っていてこういう事態が発生すると、長い時間が経った後で「メモリが足りなくてxxGBのオブジェクトはつくれません」みたいな意味のエラーメッセージが出たりする。
+
+
+## docDFは上手く使うと速い
+
+じゃあ`RMeCab::docDF()`は使えないやつなのかというと、そんなことはなく、むしろ、単語を数えあげる関数としては速い。ただ、C++側で単語を数えあげた結果をRのデータフレームに持ち直すのに時間がかかるため、`number of extracted terms`が増えると、そこからまともに動かなくなりがち。だから、形態素解析する文章の量に対して`minFreq`を十分に大きめに設定してやれば、だいたいサクッと動かせる。
+
+たとえば、`docDF()`の結果をtidyな感じに整形して返す、いい感じのラッパーを次のように用意したとする。
+
+```{r}
+#| label: docdf-wrapper-1
+docdf_rmecab <- function(dat,
+                         text_field, docid_field,
+                         minFreq = floor(sqrt(nrow(dat))) * 2,
+                         count_genkei = FALSE) {
+  text_field <- rlang::enquo(text_field)
+  docid_field <- rlang::enquo(docid_field)
+
+  # if docid is a factor, preserve ordering
+  col_names <- rlang::as_name(docid_field)
+  if (is.factor(dat[[col_names]])) {
+    col_u <- levels(dat[[col_names]])
+  } else {
+    col_u <- unique(dat[[col_names]])
+  }
+  pos_text <- tidyselect::eval_select(text_field, dat)
+
+  rmecab_res <-
+    RMeCab::docDF(dat, column = pos_text, minFreq = minFreq,
+                  type = 1, Genkei = as.numeric(!count_genkei), weight = "tf*idf")
+  ndocs <- ncol(rmecab_res) - 3
+
+  tidyr::pivot_longer(
+    rmecab_res,
+    cols = starts_with("Row"),
+    names_to = "doc_id",
+    values_to = "tf_idf",
+    names_transform = \(.x) {
+      stringr::str_remove(.x, "Row")
+    },
+    values_transform = list(tf_idf = \(.x) {
+      ifelse(.x == 0, NA_integer_, .x)
+    }),
+    values_drop_na = TRUE
+  ) |>
+    dplyr::arrange(as.integer(doc_id)) |>
+    dplyr::mutate(
+      doc_id = as.integer(doc_id),
+      doc_id = factor(doc_id, labels = col_u[unique(doc_id)]),
+      token = TERM,
+      POS1 = dplyr::if_else(POS1 == "*", NA_character_, POS1),
+      POS2 = dplyr::if_else(POS2 == "*", NA_character_, POS2),
+      tf_idf = tf_idf
+    ) |>
+    dplyr::distinct(doc_id, token, POS1, POS2, tf_idf)
+}
+
+docdf_rmecab(dat[1:5, ], text, doc_id) |>
+  dplyr::filter(token %in% c("独", "女"))
+```
+
+これは、gibasaを使って書き直すと、だいたい次のような処理になる（`dplyr::add_count()`で単語を数えているので、こちらでは文書内での語の順番が戻り値でも保持されている）。
+
+```{r}
+#| label: docdf-wrapper-2
+docdf_gibasa <- function(dat,
+                         text_field, docid_field,
+                         minFreq = floor(sqrt(nrow(dat))) * 2) {
+  text_field <- rlang::enquo(text_field)
+  docid_field <- rlang::enquo(docid_field)
+  gibasa::tokenize(dat, !!text_field, !!docid_field) |>
+    gibasa::prettify(col_select = c("POS1", "POS2")) |>
+    dplyr::mutate(TERM = paste(token, POS1, POS2, sep = "/")) |>
+    dplyr::add_count(doc_id, TERM) |>
+    # minFreqはTERMが出現する文書頻度の閾値
+    dplyr::filter(sum(n > 0) >= minFreq, .by = TERM) |>
+    # 文書がまるごと取り除かれた場合にbind_tf_idf2に怒られるので、出現しないdoc_idについてはdropする
+    dplyr::mutate(doc_id = forcats::fct_drop(doc_id)) |>
+    gibasa::bind_tf_idf2(TERM, doc_id, norm = FALSE) |>
+    dplyr::mutate(tf_idf = n * idf) |>
+    dplyr::distinct(doc_id, token, POS1, POS2, tf_idf)
+}
+
+docdf_gibasa(dat[1:5, ], text, doc_id) |>
+  dplyr::filter(token %in% c("独", "女"))
+```
+
+これらの関数に`dat`をまるごと与えて比較してみる。
+
+```{r}
+#| label: bench-docdf-1
+microbenchmark::microbenchmark(
+  gibasa = docdf_gibasa(dat, text, doc_id) |>
+    dplyr::distinct(doc_id, tf_idf) |>
+    dplyr::arrange(doc_id, tf_idf),
+  rmecab = docdf_rmecab(dat, text, doc_id) |>
+    dplyr::distinct(doc_id, tf_idf) |>
+    dplyr::arrange(doc_id, tf_idf),
+  times = 1,
+  check = "equal"
+)
+```
+
+それでもgibasaを使っているほうが速そうに見えるものの、これは`floor(sqrt(nrow(dat))) * 2`が抽出する単語の閾値としては小さすぎるからで、文書数に対してもっと`minFreq`を強気に設定して、戻り値が1,000列前後くらいになるようにしてやると、RMeCabのほうが速かったりする。
+
+```{r}
+#| label: bench-docdf-2
+microbenchmark::microbenchmark(
+  gibasa = docdf_gibasa(dat[1:1000, ], text, doc_id) |>
+    dplyr::distinct(doc_id, tf_idf) |>
+    dplyr::arrange(doc_id, tf_idf),
+  rmecab = docdf_rmecab(dat[1:1000, ], text, doc_id) |>
+    dplyr::distinct(doc_id, tf_idf) |>
+    dplyr::arrange(doc_id, tf_idf),
+  times = 1,
+  check = "equal"
+)
+```
+
+
+## 試行錯誤したい処理は切り分けよう
+
+とはいえ、`RMeCab::docDF()`を使うとき、私たちはべつに`docDF()`を上手く動かすことを目的としているのではない。ようするに、単語を数えたいはずなのだ。`docDF()`を上手く動かすことに専念するあまり、`minFreq`を大きくしすぎて、注目するべき単語を抽出できなくなってしまうのでは、元も子もない。
+
+`docDF()`の`minFreq`がするように、抽出された単語を文書頻度などにもとづいてフィルタするのはよくおこなわれることだが、実際にどれくらいの閾値を設定するかは、単語を抽出してみた後でないと決めにくいことが多い。したがって、`docDF()`で文書頻度の閾値を変えながら試行錯誤しようとすると、`minFreq`の値を変えながら`docDF()`を何回も実行してみることになるのだが、それだと、そのたびごとにコーパス全体を形態素解析して、単語を数えあげ、何十秒かかけて結果をデータフレームに変換する処理が走ることになり、しかも、`minFreq`が大きすぎるとそもそも戻り値がメモリに載らないなんてことまで起こったりする。
+
+たぶん`docDF()`は、そういう試行錯誤をするのにはあまり向いていない。こういった試行錯誤を要するシーンでは、ふつう、試行錯誤の各ステップを短いスパンで実行できるようにしておくほうがストレスが溜まりにくい。だから、たとえば`docDF()`で実現したいような処理でいえば、文章を分かち書きするステップ・単語を数えあげるステップと、単語を文書頻度などによってフィルタするステップとは、あらかじめ切り分けて実装しておいたほうが便利だろうと思われる。
+
+つまり、こういうのと、
+
+```{r}
+#| label: step-1
+toks <-
+  gibasa::tokenize(dat, text, doc_id) |>
+  gibasa::prettify(col_select = c("POS1", "POS2")) |>
+  dplyr::mutate(token = paste(token, POS1, POS2, sep = "/")) |>
+  dplyr::count(doc_id, token)
+```
+
+こういうのは、分けておいたほうがいいでしょ、という話だ。
+
+```{r}
+#| label: step-2
+minFreq <- 100 ## この値を変えながらいろいろ試行錯誤してみればいい
+
+dtm <- toks |>
+  dplyr::filter(sum(n > 0) >= minFreq, .by = token) |>
+  dplyr::mutate(doc_id = forcats::fct_drop(doc_id)) |>
+  gibasa::bind_tf_idf2(token, doc_id) |>
+  dplyr::mutate(tf_idf = n * idf) |>
+  tidytext::cast_sparse(doc_id, token, tf_idf)
+
+str(dtm)
+```
+
+
+## RMeCabCはあまり速くない
+
+こういうやり方をするなら、ようは分かち書きできればいいわけなので、`RMeCab::RMeCabC()`を使えばいいのではという話にもなる。実際、`lapply(dat$text, \(x) unlist(RMeCab::RMeCabC(x)))`というのは、非常によく見かけるコードだ。しかし、これは、分かち書きをする処理としてはあまり速くない。
+
+```{r}
+#| label: bench-rmecabc-1
+microbenchmark::microbenchmark(
+  gibasa = gibasa::tokenize(dat$text) |>
+    gibasa::prettify(col_select = c("POS1", "Original")) |>
+    dplyr::mutate(token = dplyr::if_else(is.na(Original), token, Original)) |>
+    gibasa::as_tokens() |>
+    unname(),
+  rmecab = lapply(dat$text, \(x) unlist(RMeCab::RMeCabC(x, mypref = 1))),
+  times = 1,
+  check = "equal"
+)
+```
+
+gibasaを使っているコードのほうがいろいろごちゃごちゃやっているのにもかかわらず、`RMeCabC()`を使っているコードのほうが遅い。いちおう断っておくと、これはべつにRMeCabの実装が悪いのではなく、大部分は`lapply()`が長いベクトルを渡したときに遅いせいである。品詞情報がまったくいらない場合、次のようにもできるが、それにしても遅い。
+
+```{r}
+#| label: bench-rmecabc-2
+microbenchmark::microbenchmark(
+  gibasa = {
+    toks <- gibasa::tokenize(dat$text, mode = "wakati")
+    unname(toks)
+  },
+  rmecab = lapply(dat$text, \(x) unlist(RMeCab::RMeCabC(x), use.names = FALSE)),
+  times = 1,
+  check = "equal"
+)
+
+str(toks[1:2])
+```
+
+ちなみに、RMeCabには、データフレームを引数として`RMeCabC()`と同じようなことができる`RMeCab::RMeCabDF()`という関数もある。が、これは実は`RMeCabC()`のラッパーであり、指定したデータフレームの列に対してforループのなかで`RMeCabC() |> unlist()`しているだけなので、上の処理とやっていることは変わらない。
+
+`RMeCabDF()`を使うと、たとえば次のような書き方ができるが、処理にかかる時間はここまでの例とほぼ同じになる。
+
+```{r}
+#| label: bench-rmecabdf
+df_gibasa <- function(dat, text_field, docid_field) {
+  text_field <- rlang::enquo(text_field)
+  docid_field <- rlang::enquo(docid_field)
+  gibasa::tokenize(dat, !!text_field, !!docid_field) |>
+    gibasa::prettify(col_select = "POS1") |>
+    dplyr::select(doc_id, token, POS1)
+}
+
+df_rmecab <- function(dat, text_field, docid_field) {
+  text_field <- rlang::enquo(text_field)
+  docid_field <- rlang::enquo(docid_field)
+
+  # if docid is a factor, preserve ordering
+  col_names <- rlang::as_name(docid_field)
+  if (is.factor(dat[[col_names]])) {
+    col_u <- levels(dat[[col_names]])
+  } else {
+    col_u <- unique(dat[[col_names]])
+  }
+  pos_text <- tidyselect::eval_select(text_field, dat)
+  docid_field <- dat[[col_names]]
+
+  RMeCab::RMeCabDF(dat, pos_text) |>
+    rlang::as_function(~ {
+      sizes <- lengths(.)
+      ret <- unlist(.)
+      dplyr::tibble(
+        doc_id = factor(rep(docid_field, sizes), levels = col_u),
+        token = unname(ret),
+        POS1 = names(ret)
+      )
+    })()
+}
+
+microbenchmark::microbenchmark(
+  gibasa = df_gibasa(dat, text, doc_id),
+  rmecab = df_rmecab(dat, text, doc_id),
+  times = 1,
+  check = "equal"
+)
+```
+
+
+## まとめ
+
+### gibasaを使ったほうがいいよ
+
+以上のことから、実用上`RMeCab::docDF()`だと遅いと感じられるようなシーンでは、RMeCabよりもgibasaを使ったほうがよいと思う。gibasaの詳しい使い方については、次を読んでください。
+
+- [An Alternative Rcpp Wrapper of MeCab • gibasa](https://paithiov909.github.io/gibasa/)
+- [RとMeCabによる日本語テキストマイニングの前処理](https://paithiov909.github.io/textmining-ja/)
+
+なお、ここではわざわざ比較していないが、Rで日本語の分かち書きやトークナイズをおこなえるパッケージは、ほかにもいくつか存在する。ただ、この後で紹介するRcppJaggerを除けば、いずれも分かち書きをする手段として見るかぎりでは、RMeCabと比べても圧倒的に遅い。たとえば[spacyr](https://github.com/quanteda/spacyr)などは、がんばればたぶん動かせるはずだが、RからreticulateでspaCyを使うくらいだったら、そもそも最初からPythonを使ったほうがいい疑惑もあり、あまりオススメしない。
+
+
+### gibasaでも満足できない場合
+
+gibasaはC++側でのマルチスレッド処理のバックエンドとしてRcppParallelを使っているため、oneTBBと相性が悪いハードウェアを使っていると、謎のバグを引いてしまう恐れがある。いちおう`Sys.setenv(RCPP_PARARELL_BACKEND="tinythread")`
+とかするとバックエンドを切り替えられるはずだが、それで使えるようになるかは未検証。
+
+最近、[vibrato](https://github.com/daac-tools/vibrato)というRust実装の形態素解析器をラップした[vibrrt](https://github.com/paithiov909/vibrrt)というRパッケージもつくっていて、そちらはシングルスレッドなので安全な気がするが、将来的にもgibasaほどは速くはならないと思う。
+
+もっと究極の処理速度を求めている場合、日本語の形態素解析をおこなうRパッケージとしては[RcppJagger](https://github.com/Shusei-E/RcppJagger)がおそらくもっとも処理が速い。[Jagger](https://www.tkl.iis.u-tokyo.ac.jp/~ynaga/jagger/)は、次の論文で提案された形態素解析器のC++実装で、現状、日本語の形態素解析器としては最速のものだと思われる。
+
+> Naoki Yoshinaga
+> [Back to Patterns: Efficient Japanese Morphological Analysis with Feature-Sequence Trie](https://aclanthology.org/2023.acl-short.2/)
+> The 61st Annual Meeting of the Association for Computational Linguistics (ACL-23). Toronto, Canada. July 2023
+
+ただし、RcppJagger（というかJagger）はそれほど扱いやすくはなく、とくにライセンス的に問題ないかたちで辞書を用意するのがたぶんとても難しいはずなので、現実的には研究用途でしか使えないような気がする。
+
+## セッション情報
+
+```{r}
+#| label: sessioninfo
+sessioninfo::session_info()
+```
