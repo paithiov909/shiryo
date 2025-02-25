@@ -1,0 +1,11 @@
+---
+title: my title
+format: gfm
+knitr:
+  opts_chunk:
+    tidy: "styler"
+    collapse: true
+    comment: "#>"
+    dev: "ragg_png"
+    dpi: 300
+---
