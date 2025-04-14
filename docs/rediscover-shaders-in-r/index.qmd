@@ -1,0 +1,306 @@
+---
+title: "Rediscover Fragment Shaders In R, With skiagd"
+author: "Akiru Kato (@paithiov909)"
+fig-width: 16
+fig-height: 9
+format:
+  revealjs:
+    transition: fade
+    slide-number: "c/t"
+    navigation-mode: vertical
+    overview: true
+    chalkboard: false
+    progress: true
+    history: false
+    theme: [default, custom.scss]
+    include-in-header: header.html
+    embed-resources: true
+    link-external-newwindow: true
+knitr:
+  opts_chunk:
+    tidy: "styler"
+    collapse: true
+    comment: "#>"
+    dev: "ragg_png"
+---
+
+# 👋I’m Akiru Kato
+:::{.collumns}
+
+:::{.column width="30%"}
+![](https://rawcdn.githack.com/paithiov909/paithiov909/f5342cd61b45e29c34b17fc11c9bc1766eacb441/avatar.jpg){.rounded-full}
+:::
+
+:::{.column width="70%"}
+- Aka [paithiov909](https://github.com/paithiov909) (Nobody knows the pronunciation)
+- Interested in R and creative coding
+- Creating R packages:
+  - [paithiov909/skiagd: A toy R wrapper for 'rust-skia'](https://github.com/paithiov909/skiagd)
+  - [paithiov909/aznyan: Image effects for R, ported from 5PB-3-4/AviUtl_OpenCV_Scripts](https://github.com/paithiov909/aznyan)
+:::
+
+:::
+
+# 🧐What is skiagd?
+
+- **skiagd** is a toy R wrapper for [rust-skia](https://github.com/rust-skia/rust-skia) using [savvy](https://github.com/yutannihilation/savvy)
+  - [Skia](https://skia.org/) is a cross-platform 2D graphics library developed by Google, written in C++
+  - rust-skia is a Rust binding to Skia, which ships pre-built binaries of Skia
+- Can be used to write out PNG images
+  - This is not a graphics device. It's just intended to be a drawing library for R
+- Currently not available on Windows...
+
+# 🖼️Showcase
+
+## 🌹Rose Curve
+
+```{r}
+#| label: showcase-1
+#| output-location: slide
+#| echo: true
+library(skiagd)
+library(affiner) # for preparing affine matrix
+
+size <- dev_size()
+deg2rad <- function(deg) deg * (pi / 180)
+
+mat <-
+  dplyr::tibble(
+    i = seq_len(360),
+    r = 120 * abs(sin(deg2rad(4 * i))),
+    x = r * cos(deg2rad(360 * i / 360)) + size[1] / 2,
+    y = r * sin(deg2rad(360 * i / 360)) + size[2] / 2,
+    d = 1
+  ) |>
+  dplyr::select(x, y, d) |>
+  as.matrix()
+
+trans <-
+  transform2d() %*%
+  translate2d(
+    -size[1] / 2,
+    -size[2] / 2
+  ) %*%
+  scale2d(4.0) %*%
+  translate2d(
+    size[1] / 2,
+    size[2] / 2
+  )
+
+canvas("violetred") |>
+  add_point(
+    mat %*% trans,
+    props = paint(
+      color = "snow",
+      width = 12,
+      point_mode = PointMode$Polygon
+    )
+  ) |>
+  draw_img()
+```
+
+## 🌴Vaporwave-like Image
+
+```{r}
+#| label: showcase-2
+#| output-location: slide
+#| echo: true
+size <- dev_size("px")
+
+canvas("darkslateblue") |>
+  add_rect(
+    matrix(c(0, 0, size[1], size[2]), ncol = 4),
+    props = paint(
+      blend_mode = BlendMode$Lighten,
+      sytle = Style$Fill,
+      shader = Shader$conical_gradient(
+        c(size[1] / 2 * .8, size[2] / 2 * .8),
+        c(size[1] / 2 * .2, size[2] / 2 * .2),
+        c(size[1] / 2 * .8, size[1] / 2 * .2),
+        from = col2rgba("blueviolet"),
+        to = col2rgba("skyblue"),
+        mode = TileMode$Clamp,
+        flags = FALSE,
+        transform = c(1, 0, 0, 0, 1, 0, 0, 0, 1)
+      )
+    )
+  ) |>
+  add_circle(
+    matrix(c(size[1] / 2, size[2]), ncol = 2), size[1] * .4,
+    props = paint(
+      blend_mode = BlendMode$HardLight,
+      style = Style$Stroke,
+      cap = Cap$Square,
+      path_effect = PathEffect$line_2d(12, c(12, 0, 0, 0, 32, 0, 0, 0, 1)),
+      shader = Shader$sweep_gradient(
+        c(size[1] / 2, size[2]),
+        0, 360,
+        from = col2rgba("magenta"),
+        to = col2rgba("gold"),
+        mode = TileMode$Clamp,
+        flags = FALSE,
+        transform = c(1, 0, 0, 0, 1, 0, 0, 0, 1)
+      )
+    )
+  ) |>
+  draw_img()
+```
+
+## 💫Using a 'Runtime Shader' in R
+
+Running the following code in the R console and...
+
+```r
+effect <-
+  RuntimeEffect$make(R"{
+    // modified from <https://glslsandbox.com/e#109306.1>
+    uniform shader image;
+    uniform float time;
+    uniform vec2 resolution;
+
+    half4 main(vec2 fragCoord) {
+      vec2 p = (fragCoord.xy * 2.0 - resolution) / min(resolution.x, resolution.y);
+      float lambda = time*2.5;
+      float t = 0.02/abs(tan(lambda) - length(p));
+      vec2 something = vec2(1., (sin(time)+ 1.)*0.5);
+      float dotProduct = dot(vec2(t),something)/length(p);
+      return vec4(vec3(dotProduct), 1.0);
+    }
+  }")
+
+# skiagd does not use any graphics devices to create images,
+# however, we can still open a graphics device to define the canvas size.
+ragg::agg_png(tempfile(), width = 848, height = 480)
+
+size <- dev_size()
+duration_in_frames <- 25 * 6
+cv <- canvas("transparent")
+
+for (frame in seq_len(duration_in_frames)) {
+  imgf <-
+    ImageFilter$runtime_shader(
+      effect,
+      uniforms = list(
+        time = (frame - 1) / 25,
+        resolution = as.double(size)
+      )
+    )
+
+  cv |>
+    add_rect(
+      matrix(c(0, 0, size), ncol = 4),
+      props = paint(
+        color = "gray",
+        image_filter = imgf
+      )
+    ) |>
+    add_rect(
+      matrix(c(0, 0, size), ncol = 4),
+      props = paint(
+        color = "#0000bb66",
+        blend_mode = BlendMode$Exclusion
+      )
+    ) |>
+    as_png() |>
+    writeBin(sprintf("temp/pictures/test%03d.png", frame))
+}
+dev.off()
+```
+
+## 💫Using a 'Runtime Shader' in R
+
+Then executing `ffmpeg -i temp/pictures/test%03d.png -c:v libx264 output.mp4` creates this video
+
+{{< video https://youtu.be/m5HHdAATOH4 width="848" height="480" >}}
+
+# 🤯What is the 'Runtime Shader'?
+
+- In Skia, the [Runtime Shader](https://shopify.github.io/react-native-skia/docs/image-filters/runtime-shader/) means a fragment shader that receives the currently filtered image as a `shader` uniform
+- Skia provides a shading language called [SkSL](https://skia.org/docs/user/sksl/), which has a syntax similar to GLSL. We can write Runtime Shaders in this SkSL
+- Anyway, think of them as effects that can be applied to a canvas!
+
+# 🤔What new things can we do?
+
+- To be honest, I don't know...
+  - GLSL shaders were already available through [tylermorganwall/shadr](https://github.com/tylermorganwall/shadr) that wraps GLFW and GLEW with Rcpp
+  - However, skiagd may be more powerful than shadr in that it can receive a texture
+- Let me show you another example that uses a ggplot2 plot as a texture (inspired by [this slide](https://yutannihilation.github.io/wgpugd-presentation-202205/#/%E3%81%8A%E3%82%82%E3%81%97%E3%82%8D%E3%83%9D%E3%82%B9%E3%83%88%E3%82%A8%E3%83%95%E3%82%A7%E3%82%AF%E3%83%88-1))
+
+# 🎨Another showcase
+
+## 📺Retro CRT shader
+
+Here is the effect code (borrowed from [this code](https://github.com/Drigax/RooftopRampage_Source/blob/master/public/Shaders/crt.fragment.fx))
+
+```glsl
+{{< include scripts/crt-effect.sksl >}}
+```
+## 📊 Applying the effect over plots
+
+```{r}
+#| label: crt-effect
+#| output-location: slide
+#| echo: true
+library(ggplot2)
+
+dat <- dplyr::filter(diamonds, carat < 3) |>
+  dplyr::slice_sample(n = 500)
+
+gp <-
+  ggplot(dat, aes(carat, price, color = clarity)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Retro CRT Shader")
+
+# save the plot to a PNG file once
+ggsave("test.png", gp, width = 4, height = 3, device = ragg::agg_png)
+
+# read the SkSL source into a RuntimeShader
+sksl <- readLines("./scripts/crt-effect.sksl")
+effect <- RuntimeEffect$make(paste0(sksl, collapse = "\n"))
+
+size <- dev_size()
+imgf <-
+  ImageFilter$runtime_shader(
+    effect,
+    uniforms = list(
+      iResolution = as.double(size),
+      curvature = c(6, 6),
+      scanLineOpacity = c(.4, .4),
+      vignetteOpacity = .8,
+      brightness = 1.5,
+      vignetteRoundness = 1.25
+    )
+  )
+
+# let's create a canvas and draw the plot!
+canvas() |>
+  add_rect(
+    matrix(c(0, 0, size), ncol = 4),
+    props = paint(
+      color = "white",
+      shader = Shader$from_png(
+        readBin("test.png", what = "raw", n = file.info("test.png")$size),
+        mode = TileMode$Repeat,
+        transform = diag(1, 3)
+      ),
+    )
+  ) |>
+  add_rect(
+    matrix(c(0, 0, size), ncol = 4),
+    props = paint(
+      color = "#fefefe66",
+      image_filter = imgf
+    )
+  ) |>
+  draw_img()
+```
+
+# 🎯What's next?
+
+- Skia's Runtime Shaders are really powerful but...
+  - **skiagd** is still in early stages and may be unstable
+  - I'm also wondering if there is a better way to draw R's raster objects onto Skia canvas
+- If you have any ideas, please let me know!
+
+
+# Enjoy✨{.center}

@@ -1,6 +1,8 @@
 ---
 title: my title
 format: gfm
+fig-width: 16
+fig-height: 9
 knitr:
   opts_chunk:
     tidy: "styler"
