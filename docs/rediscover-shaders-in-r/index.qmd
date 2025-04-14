@@ -224,7 +224,7 @@ Then executing `ffmpeg -i temp/pictures/test%03d.png -c:v libx264 output.mp4` cr
 - To be honest, I don't know...
   - GLSL shaders were already available through [tylermorganwall/shadr](https://github.com/tylermorganwall/shadr) that wraps GLFW and GLEW with Rcpp
   - However, skiagd may be more powerful than shadr in that it can receive a texture
-- Let me show you another example that uses a ggplot2 plot as a texture (inspired by [this slide](https://yutannihilation.github.io/wgpugd-presentation-202205/#/%E3%81%8A%E3%82%82%E3%81%97%E3%82%8D%E3%83%9D%E3%82%B9%E3%83%88%E3%82%A8%E3%83%95%E3%82%A7%E3%82%AF%E3%83%88-1))
+- Let me show you another example that uses a ggplot2 plot as background (inspired by [this slide](https://yutannihilation.github.io/wgpugd-presentation-202205/#/%E3%81%8A%E3%82%82%E3%81%97%E3%82%8D%E3%83%9D%E3%82%B9%E3%83%88%E3%82%A8%E3%83%95%E3%82%A7%E3%82%AF%E3%83%88-1))
 
 # 🎨Another showcase
 
