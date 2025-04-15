@@ -241,6 +241,8 @@ Here is the effect code (borrowed from [this code](https://github.com/Drigax/Roo
 #| label: crt-effect
 #| output-location: slide
 #| echo: true
+#| fig-width: 8
+#| fig-height: 6
 library(ggplot2)
 
 dat <- dplyr::filter(diamonds, carat < 3) |>
@@ -258,6 +260,7 @@ ggsave("test.png", gp, width = 4, height = 3, device = ragg::agg_png)
 sksl <- readLines("./scripts/crt-effect.sksl")
 effect <- RuntimeEffect$make(paste0(sksl, collapse = "\n"))
 
+# setting 'fig-width: 8' and 'fig-height: 6' for this chunk
 size <- dev_size()
 imgf <-
   ImageFilter$runtime_shader(
