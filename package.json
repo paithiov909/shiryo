@@ -1,0 +1,16 @@
+{
+  "name": "shiryo",
+  "description": "shiryo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "copy:readme": "R --no-echo -e 'fs::file_copy(\"README.md\", \"docs/README.md\", TRUE)'",
+    "clear:pictures": "R --no-echo -e 'fs::file_delete(fs::dir_ls(\"temp/pictures\"))'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paithiov909/shiryo.git"
+  },
+  "author": "paithiov909",
+  "license": "CC-BY-4.0"
+}
