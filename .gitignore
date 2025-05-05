@@ -49,3 +49,5 @@ _bookdown_files/
 
 /node_modules/
 temp/
+
+/.luarc.json

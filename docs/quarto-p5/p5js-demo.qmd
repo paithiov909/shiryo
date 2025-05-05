@@ -1,0 +1,228 @@
+---
+title: "Quartoでp5.jsを埋め込んだスライドをつくる"
+author: "あきる（paithiov909）"
+lang: ja
+format:
+  revealjs:
+    transition: fade
+    slide-number: "c/t"
+    navigation-mode: vertical
+    overview: true
+    chalkboard: false
+    progress: true
+    history: false
+    theme: [default, custom.scss]
+    include-in-header: header.html
+    link-external-newwindow: true
+filters:
+  - p5
+---
+
+# [Quarto](https://quarto.org/) is 何？
+
+- Markdownの記法で書けるオーサリングツール（CLI）です
+  - Reveal.jsをベースとしたスライドや、ペライチのHTMLページ、Docusaurusっぽいドキュメントサイトなどのほか、PDFやdocxファイルなども出力することができます
+  - レンダリング時にR, Python, Juliaなどのコードブロックを評価して、実行結果とともに埋め込むことができます
+
+# [Quarto](https://quarto.org/) is 何？
+
+- R言語用のIDEを開発しているPositという会社が中心になって開発されています（ライセンスはGPL v2）
+- 内部的にはmarkdown-itやPandocを使ってよしなに変換しているようです
+  - 中身はPandocなので、Luaでフィルタを書くことで出力フォーマットを拡張できたりと、いろいろ便利ですが、ツールとしては比較的大がかりなので、シンプルなのが好きな人には向かないかも？
+- スライド作成ツールとしては「一部言語のコードブロックを評価できるようにしたMarp」みたいなイメージかも
+
+# Quartoのスライドにp5.jsを埋め込む
+
+- このスライドもQuartoで書いています
+- HTMLスライドとしてはReveal.jsのスライドなので、かなり自由に拡張できます
+- 実際にp5.jsのスケッチを埋め込めるフィルタを書いてみました
+  - [paithiov909/quarto-p5: Quarto filter for embedding p5.js sketches](https://github.com/paithiov909/quarto-p5)
+
+
+# デモ1{.center}
+
+## JSのコードブロックを用意する
+
+次のようにスケッチをJSのコードブロックとして書きます
+
+```js
+function setup() {
+  let cnv = createCanvas(710, 400, WEBGL);
+  // ここでスケッチの親要素を指定する
+  cnv.parent("my-sketch");
+
+  angleMode(DEGREES);
+  strokeWeight(5);
+  noFill();
+  stroke(32, 8, 64);
+  describe(
+    'Users can click on the screen and drag to adjust their perspective in 3D space. The space contains a sphere of dark purple cubes on a light pink background.'
+  );
+}
+
+function draw() {
+  background(250, 180, 200);
+
+  // Call every frame to adjust camera based on mouse/touch
+  orbitControl();
+
+  // Rotate rings in a half circle to create a sphere of cubes
+  for (let zAngle = 0; zAngle < 180; zAngle += 30) {
+    // Rotate cubes in a full circle to create a ring of cubes
+    for (let xAngle = 0; xAngle < 360; xAngle += 30) {
+      push();
+
+      // Rotate from center of sphere
+      rotateZ(zAngle);
+      rotateX(xAngle);
+
+      // Then translate down 400 units
+      translate(0, 400, 0);
+      box();
+      pop();
+    }
+  }
+}
+```
+
+## スケッチの親要素を用意する
+
+- [quarto-p5](https://github.com/paithiov909/quarto-p5)のREADMEにしたがってフィルタを有効にすると、`js`のコードブロックは、コードブロックの直後にそのまま`<script>`タグとして挿入されます
+- スケッチの親要素は、たとえば次のように書くことで挿入できます
+
+~~~markdown
+```{=html}
+<div id="my-canvas"></div>
+```
+~~~
+
+## 実際のスケッチの表示例
+
+実際にはこんな感じで表示されます^[このスケッチは[Orbit Control](https://p5js.org/examples/3d-orbit-control/)から借りたものです<br />Orbit Control by p5.js Contributors and the Processing Foundation is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).]
+
+```{=html}
+<div id="my-sketch"></div>
+```
+
+# デモ2{.center}
+
+---
+
+## 複数のスケッチを埋め込む
+
+- `js`のコードブロックはそのまま`<script>`タグとして挿入しているだけなので、一つのHTMLページに複数のスケッチを埋め込みたい場合、p5.jsのインスタンスモードの書き方を使う必要があります
+- なお、インスタンスモードにかぎった話ではないですが、quarto-p5ではシェーダも埋め込むことができます
+- また、Quartoの[tabsets](https://quarto.org/docs/output-formats/html-basics.html#tabsets)などの書き方を使って、複数のコードブロックを次のスライドのように見せることができます
+
+## インスタンスモードで書く例
+
+::: {.panel-tabset}
+
+## JS
+
+```js
+const s = (p) => {
+  let atomosphere;
+  p.setup = () => {
+    let cnv = p.createCanvas(640, 480, WEBGL);
+    cnv.parent("the-other-sketch");
+
+    // Create a p5.Shader object.
+    let vert = document.getElementById("vertSrc").textContent;
+    let frag = document.getElementById("fragSrc").textContent;
+    atomosphere = p.createShader(vert, frag);
+
+    atomosphere.setUniform("uSunPos", [0, 0, -1]);
+    p.shader(atomosphere);
+  }
+  p.draw = () => {
+    atomosphere.setUniform("uSunPos", [0, p.cos(frameCount / 100) * 0.3 + 0.2, -1]);
+    p.noStroke();
+    p.plane(640, 480);
+  }
+}
+
+const sketch = new p5(s, "my-sketch-container");
+```
+
+## Vert
+
+```glsl
+//| label: vertSrc.vert
+attribute vec3 aPosition;
+varying vec3 vPosition;
+
+void main() {
+    gl_Position = vec4(aPosition, 1.0);
+    vPosition = aPosition;
+}
+```
+
+## Frag
+
+```glsl
+//| label: fragSrc.frag
+precision highp float;
+uniform vec3 uSunPos;
+
+varying vec3 vPosition;
+
+{{< include atomosphere.glsl >}}
+
+void main() {
+    vec3 color = atmosphere(
+        normalize(vPosition),           // normalized ray direction
+        vec3(0,6372e3,0),               // ray origin
+        uSunPos,                        // position of the sun
+        22.0,                           // intensity of the sun
+        6371e3,                         // radius of the planet in meters
+        6471e3,                         // radius of the atmosphere in meters
+        vec3(5.5e-6, 13.0e-6, 22.4e-6), // Rayleigh scattering coefficient
+        21e-6,                          // Mie scattering coefficient
+        8e3,                            // Rayleigh scale height
+        1.2e3,                          // Mie scale height
+        0.758                           // Mie preferred scattering direction
+    );
+
+    // Apply exposure.
+    color = 1.0 - exp(-1.0 * color);
+
+    gl_FragColor = vec4(color, 1);
+}
+```
+
+## Raw HTML
+
+次のスライドでは、このようなHTMLブロックを用意しています
+
+~~~markdown
+```{=html}
+<div id="my-sketch-container">
+  <div id="the-other-sketch"></div>
+</div>
+```
+~~~
+
+:::
+
+## 実際のスケッチの表示例
+
+こんな感じで表示されます^[このシェーダは[wwwtyro/glsl-atmosphere](https://github.com/wwwtyro/glsl-atmosphere)から借りたものです]
+
+```{=html}
+<div id="my-sketch-container">
+  <div id="the-other-sketch"></div>
+</div>
+```
+
+# スライドを公開するには
+
+- 出力したスライドはもちろんGitHub Pagesなどで公開してもいいですが、[Quarto Pub](https://quartopub.com/)というホスティングサービスも利用できます
+
+# まとめ
+
+1. [Quarto](https://quarto.org/)を使うと、Markdownの記法でサクッとスライドを作成できる
+2. [quarto-p5](https://github.com/paithiov909/quarto-p5)を使うと、スライドにp5.jsのスケッチを埋め込める
+3. Quartoでつくったページは、[Quarto Pub](https://quartopub.com/)でも公開できる
+
+# 試してみてね✨{.center}

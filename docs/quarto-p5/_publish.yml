@@ -1,0 +1,4 @@
+- source: p5js-demo.qmd
+  quarto-pub:
+    - id: da41e933-2db9-4bff-a61f-837fdd66615f
+      url: https://paithiov909.quarto.pub/p5js-demo
