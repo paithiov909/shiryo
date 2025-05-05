@@ -24,7 +24,7 @@ filters:
   - Reveal.jsをベースとしたスライドや、ペライチのHTMLページ、Docusaurusっぽいドキュメントサイトなどのほか、PDFやdocxファイルなども出力することができます
   - レンダリング時にR, Python, Juliaなどのコードブロックを評価して、実行結果とともに埋め込むことができます
 
-# [Quarto](https://quarto.org/) is 何？
+# つまり、何？
 
 - R言語用のIDEを開発しているPositという会社が中心になって開発されています（ライセンスはGPL v2）
 - 内部的にはmarkdown-itやPandocを使ってよしなに変換しているようです
@@ -33,7 +33,7 @@ filters:
 
 # Quartoのスライドにp5.jsを埋め込む
 
-- このスライドもQuartoで書いています
+- このスライドもQuartoで書いています（[ソースコード](https://github.com/paithiov909/shiryo/blob/main/docs/quarto-p5/p5js-demo.qmd)）
 - HTMLスライドとしてはReveal.jsのスライドなので、かなり自由に拡張できます
 - 実際にp5.jsのスケッチを埋め込めるフィルタを書いてみました
   - [paithiov909/quarto-p5: Quarto filter for embedding p5.js sketches](https://github.com/paithiov909/quarto-p5)
@@ -96,7 +96,7 @@ function draw() {
 ```
 ~~~
 
-## 実際のスケッチの表示例
+## 実際のスケッチの表示例1
 
 実際にはこんな感じで表示されます^[このスケッチは[Orbit Control](https://p5js.org/examples/3d-orbit-control/)から借りたものです<br />Orbit Control by p5.js Contributors and the Processing Foundation is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).]
 
@@ -205,7 +205,7 @@ void main() {
 
 :::
 
-## 実際のスケッチの表示例
+## 実際のスケッチの表示例2
 
 こんな感じで表示されます^[このシェーダは[wwwtyro/glsl-atmosphere](https://github.com/wwwtyro/glsl-atmosphere)から借りたものです]
 
