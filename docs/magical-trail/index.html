@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Akiru Kato（paithiov909）">
+<meta name="dcterms.date" content="2025-05-17">
+<meta name="description" content="dplyrやggplot2などを使って少しずつ変化するプロットを作成し、アニメーションさせるコードを紹介します。R言語を使っていますが、統計やデータ分析の話は出てきません">
+
+<title>R言語の遊び方</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="index_files/libs/clipboard/clipboard.min.js"></script>
+<script src="index_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="index_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="index_files/libs/quarto-html/popper.min.js"></script>
+<script src="index_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="index_files/libs/quarto-html/anchor.min.js"></script>
+<link href="index_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="index_files/libs/quarto-html/quarto-syntax-highlighting-985aa47af68dae11cd4d235c71fb941e.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="index_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="index_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="index_files/libs/bootstrap/bootstrap-b758d2476f1919590a5cd15cf121987d.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="index_files/libs/quarto-contrib/live-runtime/live-runtime.js" type="module"></script>
+<link href="index_files/libs/quarto-contrib/live-runtime/live-runtime.css" rel="stylesheet">
+<script src="index_files/libs/quarto-contrib/videojs/video.min.js"></script>
+<link href="index_files/libs/quarto-contrib/videojs/video-js.css" rel="stylesheet">
+<style>html{ scroll-behavior: smooth; }</style>
+<meta name="robots" content="index,follow">
+<meta name="github-repo" content="paithiov909/shiryo">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【R言語の遊び方】ggplot2でかっこいいアニメーションをつくろう">
+<meta property="og:description" content="ggplot2を使って少しずつ変化するプロットを作成し、アニメーションさせるコードを紹介します。R言語を使っていますが、統計やデータ分析の話は出てきません">
+<meta property="og:url" content="https://paithiov909.github.io/shiryo/magical-trail">
+<meta property="og:image" content="https://rawcdn.githack.com/paithiov909/paithiov909/f5342cd61b45e29c34b17fc11c9bc1766eacb441/avatar.jpg">
+<meta property="twitter:card" content="summary">
+<link rel="icon" href="https://fav.farm/🪀" data-external="1">
+<script type="module" src="index_files/libs/quarto-ojs/quarto-ojs-runtime.js"></script>
+<link href="index_files/libs/quarto-ojs/quarto-ojs.css" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#はじめに" id="toc-はじめに" class="nav-link active" data-scroll-target="#はじめに">はじめに</a></li>
+  <li><a href="#データの準備" id="toc-データの準備" class="nav-link" data-scroll-target="#データの準備">データの準備</a>
+  <ul class="collapse">
+  <li><a href="#軌跡のデータ" id="toc-軌跡のデータ" class="nav-link" data-scroll-target="#軌跡のデータ">軌跡のデータ</a></li>
+  <li><a href="#パーティクルのデータ" id="toc-パーティクルのデータ" class="nav-link" data-scroll-target="#パーティクルのデータ">パーティクルのデータ</a></li>
+  </ul></li>
+  <li><a href="#アニメーションの実装" id="toc-アニメーションの実装" class="nav-link" data-scroll-target="#アニメーションの実装">アニメーションの実装</a>
+  <ul class="collapse">
+  <li><a href="#軌跡を切り取る" id="toc-軌跡を切り取る" class="nav-link" data-scroll-target="#軌跡を切り取る">軌跡を切り取る</a></li>
+  <li><a href="#パーティクルをつくる" id="toc-パーティクルをつくる" class="nav-link" data-scroll-target="#パーティクルをつくる">パーティクルをつくる</a></li>
+  </ul></li>
+  <li><a href="#アニメーションの確認" id="toc-アニメーションの確認" class="nav-link" data-scroll-target="#アニメーションの確認">アニメーションの確認</a></li>
+  <li><a href="#むすび" id="toc-むすび" class="nav-link" data-scroll-target="#むすび">むすび</a></li>
+  </ul>
+<div class="quarto-other-links"><h2>Other Links</h2><ul><li><a href="https://github.com/paithiov909/shiryo"><i class="bi bi-link-45deg"></i>GitHub Repo</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">R言語の遊び方</h1>
+<p class="subtitle lead">ggplot2でかっこいいアニメーションをつくろう</p>
+</div>
+
+<div>
+  <div class="description">
+    <p>dplyrやggplot2などを使って少しずつ変化するプロットを作成し、アニメーションさせるコードを紹介します。R言語を使っていますが、統計やデータ分析の話は出てきません</p>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Akiru Kato（paithiov909） </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">May 17, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="はじめに" class="level2">
+<h2 class="anchored" data-anchor-id="はじめに">はじめに</h2>
+<p>先日、次のような動画（<a href="https://youtube.com/shorts/64mzzZbXgdc?feature=share">YouTube</a>でも見れます）をつくりました。この記事は、この動画をつくるのに使ったR言語のコードの一部を整理したうえで紹介するものです。</p>
+<div id="yt-short">
+<div class="quarto-video"><video id="video_shortcode_videojs_video1" width="270" height="480" class="video-js vjs-default-skin " controls="" preload="auto" data-setup="{}" title=""><source src="./magical-trail-vert.mp4"></video></div>
+<blockquote class="blockquote">
+<p>A short animation inspired by the <a href="https://openprocessing.org/sketch/835887">Magical trail shader</a> created by Jason Labbe using p5.js. Three animated scenes were generated in R and combined using a video editor.</p>
+</blockquote>
+</div>
+<p>この動画は、3つのシーンから構成されています。各シーンでは1本ずつシアンの曲線が軌跡として描画されていて、軌跡が描かれるのにしたがって、軌跡が通過したあたりから黄色のパーティクルが出現しています。ここでは、これら3つのシーンのうち、3番めのシーンのような、シンプルな直線の軌跡とともにパーティクルを描くコードを見ていきます。</p>
+<p>Rは、しばしば、統計やデータ分析を便利におこなうのに特化したプログラミング言語として紹介されます。実際、この記事を読んでいる読者の多くも、おそらく第一には、Rは仕事や研究のための道具であると考えていることでしょう。この記事は、特段そういう考え方を否定するものではありませんが、私がここで伝えたいと思っているのは、私たちは、もっとRを自由に使うことができるのではないかということです。</p>
+<p>たとえば、大工になるためにノコギリで音楽を奏でることに習熟する必要はない気がしますが、ノコギリで音楽を奏でてみることは、きっと、ノコギリがどんな道具なのかを知るための手がかりになることでしょう。みなさんが、この記事をきっかけとして、Rがどんな道具であり、どのような点が便利なのかを再発見してくれたらうれしいです。</p>
+<p>このページは<a href="https://github.com/r-wasm/quarto-live">quarto-live</a>を使っているので、次のようなコードブロックはWebRで実際に実行してみることができます。試しに”Run Code”を押してみてください。</p>
+<div class="cell">
+<div>
+<div id="webr-1" class="exercise-cell">
+
+</div>
+<script type="webr-1-contents">
+eyJhdHRyIjp7ImVkaXQiOnRydWUsImV2YWwiOnRydWUsImxhYmVsIjoic2V0dXAifSwiY29kZSI6InN1cHByZXNzUGFja2FnZVN0YXJ0dXBNZXNzYWdlcyh7XG4gIGxpYnJhcnkoZHBseXIpXG4gIGxpYnJhcnkoZ2dwbG90Milcbn0pXG5cbmJnX2NvbCA8LSBcIiMyYjJiMmJcIlxuXG5jYW52YXMgPC1cbiAgZ2dwbG90KCkgK1xuICB4bGltKDAsIGRldi5zaXplKHVuaXRzID0gXCJweFwiKVsxXSkgK1xuICB5bGltKDAsIGRldi5zaXplKHVuaXRzID0gXCJweFwiKVsyXSkgK1xuICB0aGVtZV92b2lkKCkgK1xuICB0aGVtZShcbiAgICBwbG90LmJhY2tncm91bmQgPSBlbGVtZW50X3JlY3QoXG4gICAgICBmaWxsID0gYmdfY29sLCBjb2xvciA9IGJnX2NvbFxuICAgICksXG4gICAgbGVnZW5kLnBvc2l0aW9uID0gXCJub25lXCIsXG4gICAgcGxvdC5tYXJnaW4gPSB1bml0KGMoMCwgMCwgMCwgMCksIFwiY21cIilcbiAgKSArXG4gIHNjYWxlX2NvbG9yX2NvbnRpbnVvdXMobG93ID0gXCIjZWJlYjAwXCIsIGhpZ2ggPSBcIiNmZmZmODlcIilcblxucHJpbnQoY2FudmFzKSJ9
+</script>
+</div>
+</div>
+<p>この上に黒い画像が表示されたはずです。このggplotオブジェクトをキャンバスとして使うことにして、まずは、ここに<code>geom_point()</code>で描き加えるための点列を用意していきましょう。</p>
+</section>
+<section id="データの準備" class="level2">
+<h2 class="anchored" data-anchor-id="データの準備">データの準備</h2>
+<section id="軌跡のデータ" class="level3">
+<h3 class="anchored" data-anchor-id="軌跡のデータ">軌跡のデータ</h3>
+<p>早速ですが、みなさんは、Rで先ほど見たような軌跡を用意する方法を知っていますか？</p>
+<p><img src="./magical-trail.gif" alt="シンプルな直線の軌跡" height="320"></p>
+<p>たとえばこんな軌跡を描きたいと思っているのですが、これはどうやって描けばよいのでしょうか。このシアンの軌跡をよく観察すると、これは始点と終点をまっすぐに結んだだけの直線ではなく、見た感じ、手描きの線のようにランダムに揺らいでいる線であることがわかります。</p>
+<p>そもそも、私がこれをつくるのに参考にした<a href="https://openprocessing.org/sketch/835887">Magical trail shader</a>は、p5.jsで書かれている作品で、マウスカーソルの位置を入力として受け取って、軌跡を描画する仕組みのものです。一方、私たちが使っているR言語のグラフィックデバイスでは、p5.jsのキャンバスのように、マウスカーソルがある位置を柔軟に取得することはできません。<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+<p>したがって、このような軌跡を再現するには、私たちが何気なくマウスを動かしたときのような軌跡を模倣するコードを書く必要があります。しかし、それはRで簡単に書くのは難しいため、ここではズルをすることにしましょう。<a href="https://github.com/arevi/wind-mouse">arevi/wind-mouse</a>というJavaScriptのコードを元にして、マウスを動かしたときのような軌跡を生成するC++のコードを準備しました。次のRパッケージに収録しているので、これを使うことにします。</p>
+<ul>
+<li><a href="https://github.com/paithiov909/rasengan">paithiov909/rasengan: Generation of geometric curves</a></li>
+</ul>
+<p>具体的には<code>rasengan::wind_mouse()</code>という関数を使います。このrasenganパッケージは、このページのWebRの環境にはすでにインストールされているので、次のコードブロックから試せます。</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>WebRのコードブロックは、とりあえず掲載している順に1回ずつ、とばさずに実行していってください</p>
+</div>
+</div>
+<div class="cell">
+<div>
+<div id="webr-2" class="exercise-cell">
+
+</div>
+<script type="webr-2-contents">
+eyJhdHRyIjp7ImVkaXQiOnRydWUsImV2YWwiOnRydWUsImxhYmVsIjoibW91c2UtdHJhaWwifSwiY29kZSI6Imdlbl9tb3VzZV90cmFpbCA8LSBcXChzaXplLCBzZWVkID0gc2FtcGxlLmludCgxMzM3LCAxKSwgbW91c2Vfc3BlZWQgPSA3KSB7XG4gIHJhc2VuZ2FuOjp3aW5kX21vdXNlKFxuICAgIHN0YXJ0ID0gYyhydW5pZigxLCAwLCBzaXplWzFdIC8gMiksIHJ1bmlmKDEsIDAsIHNpemVbMl0pKSxcbiAgICBlbmQgPSBjKHJ1bmlmKDEsIHNpemVbMV0gLyAyLCBzaXplWzFdKSwgcnVuaWYoMSwgc2l6ZVsyXSAvIDIsIHNpemVbMl0pKSxcbiAgICBtb3VzZV9zcGVlZCA9IG1vdXNlX3NwZWVkLFxuICAgIHNlZWQgPSBzZWVkXG4gICkgfD5cbiAgICBkcGx5cjo6bXV0YXRlKGlkID0gZHBseXI6OnJvd19udW1iZXIoKSkgfD5cbiAgICBkcGx5cjo6YXNfdGliYmxlKClcbn1cblxuZGF0IDwtIGdlbl9tb3VzZV90cmFpbChzaXplID0gZGV2LnNpemUodW5pdHMgPSBcInB4XCIpKVxuXG5ncCA8LSBjYW52YXMgK1xuICBnZW9tX3BvaW50KGRhdGEgPSBkYXQsIGFlcyh4ID0geCwgeSA9IHksIGNvbG9yID0gaWQpKVxuXG5wcmludChncCkifQ==
+</script>
+</div>
+</div>
+<p>ここでは、先ほど用意したキャンバスに、生成した点列を黄色の点として描画しています。何回か”Run Code”を押してもらうとわかると思いますが、この関数は<code>start</code>から<code>end</code>までのあいだを手描き風に結んだ点列をデータフレームとして返します。ここでは、軌跡のデータ<code>dat</code>は<code>x</code>, <code>y</code>, <code>t</code>と<code>id</code>列の4列からなり、キャンバスの左半分のどこかから、右半分のどこかに向かう線がランダムに描かれるようにしています。</p>
+</section>
+<section id="パーティクルのデータ" class="level3">
+<h3 class="anchored" data-anchor-id="パーティクルのデータ">パーティクルのデータ</h3>
+<p>次に、パーティクルの元となるデータをつくっておきます。見本のアニメーションをもう一度見てみましょう。</p>
+<p><img src="./magical-trail.gif" alt="シンプルな直線の軌跡" height="320"></p>
+<p>黄色のパーティクルに注目すると、軌跡に伴われるパーティクルは、軌跡が通過したあたりから順に出現して、それぞれのスピード・方向をもって移動していることがわかると思います。つまり、パーティクルの元データ<code>particles</code>は、パーティクルの出現位置となる、軌跡の各時刻におけるx, y座標と、速度<code>velocity</code>、また、それぞれのパーティクルが向かう方向<code>angle</code>を保持している必要があります。</p>
+<p>次のような感じです。</p>
+<div class="cell">
+<div>
+<div id="webr-3" class="exercise-cell">
+
+</div>
+<script type="webr-3-contents">
+eyJhdHRyIjp7ImVkaXQiOnRydWUsImV2YWwiOnRydWUsImxhYmVsIjoicGFydGljbGVzIn0sImNvZGUiOiJtYWcgPC0gXFwoZCkge1xuICByZXQgPC1cbiAgICBkaXN0KGQpIHw+XG4gICAgYXMudmVjdG9yKCkgfD5cbiAgICBfW3JsYW5nOjphc19mdW5jdGlvbih+IHtcbiAgICAgICMgcHVsbCBvdXQgdGhlIGRpYWdvbmFsIGVsZW1lbnRzIG9mIHRoZSBkaXN0IG1hdHJpeFxuICAgICAgbiA8LSBucm93KGQpXG4gICAgICBpIDwtIHNlcV9sZW4obilcbiAgICAgIGkgKyAoaSAtIDEpICogKG4gLSAxKSAtIChpIC0gMSkgKiBpIC8gMlxuICAgIH0pKCldXG4gIHJldFxufVxuXG5wYXJ0aWNsZXMgPC0gZGF0IHw+XG4gIGRwbHlyOjpyZWZyYW1lKFxuICAgIHQgPSB0LFxuICAgIHBvc2l0aW9uID0gbWF0cml4KGMoeCwgeSwgcmVwX2xlbigxLCBkcGx5cjo6bigpKSksIG5jb2wgPSAzKSxcbiAgICB2ZWxvY2l0eSA9IG1hdHJpeChcbiAgICAgIGMoXG4gICAgICAgIGRwbHlyOjpsYWcoeCwgZGVmYXVsdCA9IGRwbHlyOjpmaXJzdCh4KSkgLyBkZXYuc2l6ZSh1bml0cyA9IFwicHhcIilbMV0sXG4gICAgICAgIGRwbHlyOjpsYWcoeSwgZGVmYXVsdCA9IGRwbHlyOjpmaXJzdCh5KSkgLyBkZXYuc2l6ZSh1bml0cyA9IFwicHhcIilbMl1cbiAgICAgICkgKiBydW5pZihkcGx5cjo6bigpLCAxLCAxMCkgKiBpZmVsc2UodCAlJSAyLCAtMSwgMSksXG4gICAgICBuY29sID0gMlxuICAgICksXG4gICAgYW5nbGUgPSBydW5pZihkcGx5cjo6bigpLCAtcGkgLyA2LCBwaSAvIDYpLFxuICAgIGFpcl9kcmFnID0gcnVuaWYoZHBseXI6Om4oKSwgMC45MiwgMC45OCksXG4gICAgbWFzcyA9IHJ1bmlmKGRwbHlyOjpuKCksIDMsIDgpLFxuICAgIGNvbG9yID0gc2FtcGxlLmludCg1LCBkcGx5cjo6bigpLCByZXBsYWNlID0gVFJVRSlcbiAgKSB8PlxuICBkcGx5cjo6ZmlsdGVyKGRwbHlyOjpyb3dfbnVtYmVyKCkgJWluJSB3aGljaChtYWcocG9zaXRpb24pID4gNSkpXG5cbnBhcnRpY2xlcyJ9
+</script>
+</div>
+</div>
+<p>なお、<code>rasengan::wind_mouse()</code>の仕様で、生成された軌跡の点列では、2点のあいだの移動量にムラがあります。ここでは、すべての時刻における点からパーティクルを発生させるのではなく、一つ後ろの点への移動量が<code>5</code>に満たない場合には、パーティクルを新たに出さないように設計しています。<code>mag()</code>はその計算のためのスニペットで、行列かデータフレームを受け取って、各行について一つ後ろの行とのあいだのユークリッド距離を返しているものです。</p>
+<p>ちなみに、ここで用意しているtibbleは<code>position</code>や<code>velocity</code>列の値として行列をもっています。dplyrやtidyrを使った通常のデータハンドリングにおいても、セルにtibbleをネストさせることはあるかもしれませんが、このように列の値に行列をもつことはあまりおこなわれないので、そもそもこういうかたちのtibbleをつくれることを知らなかった人もいるかもしれません。<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
+<p>ここでは、この後でやるように点列の位置をまとめてアフィン変換するのにXY座標を行列のかたちでもっておくと都合がよいため、このようにしています。</p>
+</section>
+</section>
+<section id="アニメーションの実装" class="level2">
+<h2 class="anchored" data-anchor-id="アニメーションの実装">アニメーションの実装</h2>
+<section id="軌跡を切り取る" class="level3">
+<h3 class="anchored" data-anchor-id="軌跡を切り取る">軌跡を切り取る</h3>
+<p>それでは、実際にアニメーションをつくるためのコードを見ていきましょう。</p>
+<p>ggplot2と組み合わせてアニメーションをつくるには、ふつうは<a href="https://gganimate.com/">gganimate</a>を使います。しかし、gganimateは基本的にデータフレーム中の<code>key</code>に応じて一つのグラフを描き分けることによって、アニメーションの各フレームを生成するといった仕組みのものであるため、ここでつくりたいようなアニメーションをgganimateでつくるためには、各フレームにおける軌跡とパーティクルの位置をあらかじめすべて計算してしまったうえで、それぞれを巨大なデータフレームとしてまとめておく必要があります。</p>
+<p>おそらく、そっちのほうが「Rっぽい」書き方ではあるのですが、ここでつくりたいようなアニメーションのロジックをそういう書き方に移植するのはかなり手間なので、ここではgganimateは使わない方針でいきます。gganimateを使わなくても、<a href="https://github.com/thomasp85/tweenr">tweenr</a>の関数を直接使えばイージングアニメーションをつくることは可能です。</p>
+<p>ここでは、25fpsで3秒（75フレーム）のアニメーションをつくることにしましょう。まず、軌跡は、点として出現したら出しっぱなしにするのではなく、経過時間に応じて短くなるようにします。そのために、経過時間に応じて<code>remove_count</code>を増加させ、<code>remove_count</code>の数だけ前から取り除いていきます。</p>
+<div class="cell">
+<div>
+<div id="webr-4" class="exercise-cell">
+
+</div>
+<script type="webr-4-contents">
+eyJhdHRyIjp7ImVkaXQiOnRydWUsImV2YWwiOnRydWUsImxhYmVsIjoidHJpbS10cmFpbCJ9LCJjb2RlIjoidHJpbV90cmFpbCA8LSBcXCh0YmwsIGZyYW1lLCBmcHMgPSAyNSwgbWF4X3RyYWlsX2NvdW50ID0gMzApIHtcbiAgY3VycmVudF90aW1lIDwtIGZyYW1lIC8gZnBzICogMTAwMCAjIG1pbGxpc2Vjb25kc1xuICByZW1vdmVfY291bnQgPC1cbiAgICB0d2VlbnI6OnR3ZWVuX2F0KDEsIG5yb3codGJsKSwgZnJhbWUgLyBmcHMsIGVhc2UgPSBcImN1YmljLWluLW91dFwiKSB8PlxuICAgIGZsb29yKClcbiAgZHBseXI6OmZpbHRlcih0YmwsIHQgPCBjdXJyZW50X3RpbWUpIHw+XG4gICAgZHBseXI6OnNsaWNlX3RhaWwobiA9IG1heF90cmFpbF9jb3VudCkgfD5cbiAgICBkcGx5cjo6c2xpY2VfdGFpbChuID0gLTEgKiByZW1vdmVfY291bnQpXG59XG5cbnRyaW1fdHJhaWwoZGF0LCAxMCkifQ==
+</script>
+</div>
+</div>
+<p>この<code>trim_trail()</code>の<code>frame</code>引数にフレーム番号を与えると、そのフレームにおける切り取られた軌跡が返されるので、それをforループか何かのなかでフレーム番号を増やしながら繰り返し呼び、各フレームの状態をggplot2でプロットしてから、一連のプロットをまとめてやればアニメーションになります。</p>
+</section>
+<section id="パーティクルをつくる" class="level3">
+<h3 class="anchored" data-anchor-id="パーティクルをつくる">パーティクルをつくる</h3>
+<p>パーティクルの部分についても、軌跡の部分と同様の方針で実装します。つまり、各フレームで描画するパーティクルの位置や属性は、フレーム番号を受け取って、元データ<code>particles</code>からその都度計算します。</p>
+<div class="cell">
+<div>
+<div id="webr-5" class="exercise-cell">
+
+</div>
+<script type="webr-5-contents">
+eyJhdHRyIjp7ImVkaXQiOnRydWUsImV2YWwiOnRydWUsImxhYmVsIjoicG9wLXBhcnRpY2xlcyJ9LCJjb2RlIjoidHJhbnNsYXRlX3BvcyA8LSBcXChvcmlnaW4sIHRyYW5zX3h5LCByb3RfYW5nbGUpIHtcbiAgYWZmaW5lX21hdCA8LVxuICAgIG1hdHJpeChjKFxuICAgICAgY29zKHJvdF9hbmdsZSksIHNpbihyb3RfYW5nbGUpLCB0cmFuc194eVssIDFdLFxuICAgICAgLXNpbihyb3RfYW5nbGUpLCBjb3Mocm90X2FuZ2xlKSwgdHJhbnNfeHlbLCAyXSxcbiAgICAgIDAsIDAsIDFcbiAgICApLCBuY29sID0gMylcbiAgb3JpZ2luICUqJVxuICAgIG1hdHJpeChjKDEsIDAsIC1vcmlnaW5bLCAxXSwgMCwgMSwgLW9yaWdpblssIDJdLCAwLCAwLCAxKSwgbmNvbCA9IDMpICUqJVxuICAgIGFmZmluZV9tYXQgJSolXG4gICAgbWF0cml4KGMoMSwgMCwgb3JpZ2luWywgMV0sIDAsIDEsIG9yaWdpblssIDJdLCAwLCAwLCAxKSwgbmNvbCA9IDMpXG59XG5cbmdlbl9wYXJ0aWNsZXMgPC0gXFwodGJsLCBrZXkpIHtcbiAgbGlmZXRpbWUgPC0gZHBseXI6OnB1bGwodGJsLCBjdXJyZW50X3BhcnRpY2xlc19jb3VudCkgLSBkcGx5cjo6cHVsbCh0YmwsIGlkKVxuXG4gIG9yaWdpbiA8LSBkcGx5cjo6cHVsbCh0YmwsIHBvc2l0aW9uKVxuICByb3RfYW5nbGUgPC0gZHBseXI6OnB1bGwodGJsLCBhbmdsZSlcbiAgdHJhbnNfeHkgPC0gUmVkdWNlKFxcKGFjYywgbnh0KSB7XG4gICAgYWNjICsgZHBseXI6OnB1bGwodGJsLCB2ZWxvY2l0eSkgKiBkcGx5cjo6cHVsbCh0YmwsIGFpcl9kcmFnKV5ueHRcbiAgfSwgc2VxX2xlbihtYXgoMSwgZmxvb3IobGlmZXRpbWUpKSksIGluaXQgPSBkcGx5cjo6cHVsbCh0YmwsIHZlbG9jaXR5KSlcblxuICBkcGx5cjo6dGliYmxlKFxuICAgIHQgPSBkcGx5cjo6cHVsbChrZXksIHQpLFxuICAgIHh5ID0gdHJhbnNsYXRlX3BvcyhvcmlnaW4sIHRyYW5zX3h5LCByb3RfYW5nbGUpLFxuICAgIG9wYWNpdHkgPSAxIC0gbGlmZXRpbWUgLyBkcGx5cjo6cHVsbCh0YmwsIGN1cnJlbnRfcGFydGljbGVzX2NvdW50KSxcbiAgICBzaXplID0gZHBseXI6OnB1bGwodGJsLCBtYXNzKSAqIGRpc3QodHJhbnNfeHlbMSwgXSlbMV0sXG4gICAgY29sb3IgPSBkcGx5cjo6cHVsbCh0YmwsIGNvbG9yKVxuICApXG59XG5cbnBvcF9wYXJ0aWNsZXMgPC0gXFwodGJsLCBmcmFtZSwgZnBzID0gMjUsIG1heF9wYXJ0aWNsZV9jb3VudCA9IDUwKSB7XG4gIGN1cnJlbnRfdGltZSA8LSBmcmFtZSAvIGZwcyAqIDEwMDAgIyBtaWxsaXNlY29uZHNcbiAgcmVtb3ZlX2NvdW50IDwtXG4gICAgdHdlZW5yOjp0d2Vlbl9hdCgxLCBucm93KHRibCksIGZyYW1lIC8gZnBzLCBlYXNlID0gXCJjdWJpYy1pblwiKSB8PlxuICAgIGZsb29yKClcbiAgdGJsIHw+XG4gICAgZHBseXI6OmZpbHRlcih0IDwgY3VycmVudF90aW1lKSB8PlxuICAgIGRwbHlyOjpzbGljZV90YWlsKG4gPSBtYXhfcGFydGljbGVfY291bnQpIHw+XG4gICAgZHBseXI6Om11dGF0ZShpZCA9IGRwbHlyOjpjb25zZWN1dGl2ZV9pZCh0KSwgY3VycmVudF9wYXJ0aWNsZXNfY291bnQgPSBkcGx5cjo6bigpKSB8PlxuICAgIGRwbHlyOjpncm91cF9ieSh0KSB8PlxuICAgIGRwbHlyOjpncm91cF9tYXAoZ2VuX3BhcnRpY2xlcykgfD5cbiAgICBkcGx5cjo6YmluZF9yb3dzKCkgfD5cbiAgICBkcGx5cjo6c2xpY2VfdGFpbChuID0gLTEgKiByZW1vdmVfY291bnQpXG59XG5cbnBvcF9wYXJ0aWNsZXMocGFydGljbGVzLCAxMCkifQ==
+</script>
+</div>
+</div>
+<p><code>pop_particles()</code>は<code>particles</code>を<code>gen_particles()</code>に渡してその時点におけるパーティクルを生成し、生成されたパーティクルを<code>trim_trail()</code>と同様に経過時間に応じて切り詰めます。</p>
+<p><code>gen_particles()</code>は、受け取ったパーティクルの元データから、その時点において現れているパーティクルの位置と属性を計算する関数です。基本的には、古いパーティクルほど遅くなるように<code>velocity</code>に<code>air_drag</code>をかけながらパーティクルの移動量を計算したうえで、元の位置<code>position</code>からアフィン変換しているだけのものです。</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+アフィン変換
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>アフィン変換というのは、2次元空間における線形変換のうち、直線性と平行性を保つような変換のことです。図形を移動、回転、拡大・縮小、せん断する処理はこれで書くことができます。</p>
+<p>たとえば、次は<span class="math inline">\((x, y)\)</span>を原点を基準として<span class="math inline">\((\text{tx}, \text{ty})\)</span>だけ移動させつつ、角度<span class="math inline">\(\theta\)</span>だけ回転させる変換です。</p>
+<p><span class="math display">\[
+\begin{bmatrix}
+x' \\
+y' \\
+1
+\end{bmatrix}
+=
+\begin{bmatrix}
+\cos\theta &amp; -\sin\theta &amp; \text{tx} \\
+\sin\theta &amp; \cos\theta &amp; \text{ty} \\
+0 &amp; 0 &amp; 1
+\end{bmatrix}
+\begin{bmatrix}
+x \\
+y \\
+1
+\end{bmatrix}
+\]</span></p>
+</div>
+</div>
+<p>なお、<code>Reduce()</code>に相当する処理は、ふつうは<code>purrr::reduce()</code>を使って書きます。ここではWebRでダウンロードされるパッケージの数を減らすために、あえて<code>Reduce()</code>を使っています。</p>
+</section>
+</section>
+<section id="アニメーションの確認" class="level2">
+<h2 class="anchored" data-anchor-id="アニメーションの確認">アニメーションの確認</h2>
+<p>準備はできたので、試しにフレームをプロットしてみましょう。プロットをおこなう関数はこんな感じにしておきます。</p>
+<div class="cell">
+<div>
+<div id="webr-6" class="exercise-cell">
+
+</div>
+<script type="webr-6-contents">
+eyJhdHRyIjp7ImVkaXQiOnRydWUsImV2YWwiOnRydWUsImxhYmVsIjoiZHJhdy10cmFpbCJ9LCJjb2RlIjoiZHJhd190cmFpbCA8LSBcXCh0cmFpbCwgcGFydGljbGUsIGNhbnZhcykge1xuICBkaXJlY3Rpb24gPC0gdGFpbCh0cmFpbCwgbiA9IDEpIC0gaGVhZCh0cmFpbCwgbiA9IDEpXG4gIGdwIDwtIGNhbnZhcyArXG4gICAgZ2dmeDo6d2l0aF9tb3Rpb25fYmx1cihcbiAgICAgIGdlb21fcG9pbnQoXG4gICAgICAgIGRhdGEgPSB0cmFpbCxcbiAgICAgICAgYWVzKHggPSB4LCB5ID0geSksIGNvbG9yID0gXCJjeWFuXCIsIHNpemUgPSA2LCBhbHBoYSA9IDAuOFxuICAgICAgKSxcbiAgICAgIHNpZ21hID0gMC42LFxuICAgICAgYW5nbGUgPSByYXNlbmdhbjo6cmFkMmRlZyhhdGFuMihkaXJlY3Rpb24keSwgZGlyZWN0aW9uJHgpKVxuICAgICkgK1xuICAgIGdlb21fcG9pbnQoXG4gICAgICBkYXRhID0gcGFydGljbGUsXG4gICAgICBhZXMoeCA9IHh5WywgMV0sIHkgPSB4eVssIDJdLCBhbHBoYSA9IG9wYWNpdHksIGNvbG9yID0gY29sb3IsIHNpemUgPSBzaXplKVxuICAgIClcbiAgcHJpbnQoZ3ApXG59In0=
+</script>
+</div>
+</div>
+<p>とくに必須ということではないですが、軌跡の部分については、点がある程度つながっているように描かれてほしいので、<code>ggfx::with_motion_blur()</code>を使って、弱めのモーションブラーをかけています。</p>
+<p>次のコードブロックで、各フレームの状態をインタラクティブに確認することができます。</p>
+<hr>
+<div class="cell">
+<div class="sourceCode cell-code hidden" id="cb1" data-startfrom="334" data-source-offset="0"><pre class="sourceCode js code-with-copy"><code class="sourceCode javascript" style="counter-reset: source-line 333;"><span id="cb1-334"><a href="#cb1-334" aria-hidden="true" tabindex="-1"></a>viewof n <span class="op">=</span> Inputs<span class="op">.</span><span class="fu">range</span>([<span class="dv">1</span><span class="op">,</span> <span class="dv">75</span>]<span class="op">,</span> {<span class="dt">step</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span> <span class="dt">label</span><span class="op">:</span> <span class="st">"フレーム番号"</span>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div id="ojs-cell-1" data-nodetype="declaration">
+
+</div>
+</div>
+</div>
+<div class="cell" data-input="false">
+<div>
+<div id="webr-7" class="exercise-cell">
+
+</div>
+<script type="webr-7-contents">
+eyJhdHRyIjp7ImVkaXQiOnRydWUsImV2YWwiOnRydWUsImlucHV0IjpbIm4iXSwibGFiZWwiOiJpbnRlcmFjdGl2ZS1wbG90In0sImNvZGUiOiJmcmFtZSA8LSBzZXEoMSwgMjUsIGxlbmd0aC5vdXQgPSA3NSlbbl1cbnRyYWlsIDwtIHRyaW1fdHJhaWwoZGF0LCBmcmFtZSlcbnBhcnRpY2xlIDwtIHBvcF9wYXJ0aWNsZXMocGFydGljbGVzLCBmcmFtZSlcblxuZHJhd190cmFpbCh0cmFpbCwgcGFydGljbGUsIGNhbnZhcykifQ==
+</script>
+</div>
+</div>
+<hr>
+<p>こうして準備した<code>draw_trail()</code>を使って、次のようにして生成したGIFアニメーションが、先ほどから見ていた見本になります。なお、パーティクルなどに「光っている」ように見える効果を付けるために、ここでは次のRパッケージを利用して、生成した各フレームの画像に拡散フィルタをかけています。</p>
+<ul>
+<li><a href="https://github.com/paithiov909/aznyan">paithiov909/aznyan: Image filters for R, ported from https://github.com/5PB-3-4/AviUtl_OpenCV_Scripts</a></li>
+</ul>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fps <span class="ot">&lt;-</span> <span class="dv">25</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>canvas_size <span class="ot">&lt;-</span> <span class="fu">dev.size</span>(<span class="at">units =</span> <span class="st">"px"</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># フレームの書き出し</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>ragg<span class="sc">::</span><span class="fu">agg_png</span>(<span class="st">"public/pictures/%04d.png"</span>, <span class="at">width =</span> canvas_size[<span class="dv">1</span>], <span class="at">height =</span> canvas_size[<span class="dv">2</span>], <span class="at">background =</span> <span class="st">"transparent"</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>purrr<span class="sc">::</span><span class="fu">iwalk</span>(<span class="fu">seq</span>(<span class="dv">1</span>, fps, <span class="at">length.out =</span> <span class="dv">75</span>), \(frame, i) { <span class="co"># in frames</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  trail <span class="ot">&lt;-</span> <span class="fu">trim_trail</span>(dat, frame)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  particle <span class="ot">&lt;-</span> <span class="fu">pop_particles</span>(particles, frame)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">draw_trail</span>(trail, particle, canvas)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>}, <span class="at">.progress =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="fu">dev.off</span>()</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># GIFアニメーションの作成</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>png_files <span class="ot">&lt;-</span> fs<span class="sc">::</span><span class="fu">dir_ls</span>(<span class="st">"public/pictures/"</span>, <span class="at">glob =</span> <span class="st">"*.png"</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>dir <span class="ot">&lt;-</span> <span class="fu">tempdir</span>()</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>new_files <span class="ot">&lt;-</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  purrr<span class="sc">::</span><span class="fu">imap</span>(<span class="fu">unname</span>(png_files), \(f, i) {</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    png <span class="ot">&lt;-</span> <span class="fu">readBin</span>(f, <span class="at">what =</span> <span class="st">"raw"</span>, <span class="at">n =</span> <span class="fu">file.info</span>(f)<span class="sc">$</span>size) <span class="sc">|&gt;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>      aznyan<span class="sc">::</span><span class="fu">diffusion_filter</span>(<span class="at">factor =</span> <span class="dv">8</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    path <span class="ot">&lt;-</span> <span class="fu">paste0</span>(dir, <span class="st">"/"</span>, stringr<span class="sc">::</span><span class="fu">str_pad</span>(i, <span class="dv">4</span>, <span class="st">"left"</span>, <span class="st">"0"</span>), <span class="st">".png"</span>)</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">writeBin</span>(png, <span class="at">con =</span> path)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    path</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>  }, <span class="at">.progress =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unlist</span>(<span class="at">use.names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>gifski<span class="sc">::</span><span class="fu">gifski</span>(new_files, <span class="st">"magical-trail.gif"</span>, <span class="at">delay =</span> <span class="dv">1</span> <span class="sc">/</span> fps, <span class="at">progress =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="むすび" class="level2">
+<h2 class="anchored" data-anchor-id="むすび">むすび</h2>
+<p>この記事では、Magical trail shaderを参考にしたロジックの実装例として、シアンの軌跡がパーティクルを伴って描かれるアニメーションをつくるためのRのコードを紹介しました。</p>
+<p>R言語は、おもに統計やデータ分析をおこなうのに便利なプログラミング言語であり、オブジェクト指向っぽいコードを書くのにはあまり適していません。そのため、何かのアプリケーションや、ゲームなどをつくるのには不向きなのですが、こういったクリエイティブコーディング的なことをするのには、意外と便利な側面もそなえています。</p>
+<p>たとえば、データフレームや行列といったデータ構造が標準機能として組み込まれている点や、基本的な計算がベクトライズされていることにくわえて、dplyrなどのパッケージが使えることで、そうしたデータ構造を使った計算処理を比較的シンプルに書ける点などは、こうしたコードを書くうえでなかなか魅力的だと思います。また、QuartoやRMarkdownのようなノートブック形式のファイルのなかで、手軽に実行してみることができるところも非常に便利なポイントです。</p>
+<p>一方で、実際にRで凝ったアニメーションをつくろうとすると、体験として不便な側面もあります。とくに、Rではアニメーションを試しに再生しながらリアルタイムに確認できる手段がないため、実際のコーディングでは、いくつかフレーム単位で書き出して見た目をチェックしてから、試しに短めのアニメーションをレンダリングしてみて、よさそうなら本番のレンダリングをするといった試行錯誤が必要になります。これは、こうした作品をつくるうえである程度は仕方がないことなのですが、「試しに再生してみる」ステップを繰り返すのに若干時間がかかるというのは、アニメーションをつくるうえではストレスになりやすいです。</p>
+<p>次の動画もRで書いたコードでつくられているアニメーションですが、これをつくる作業も、コーディングそのものがというよりは、待ち時間がいちいち長いところがストレスでした。</p>
+<div class="quarto-video ratio ratio-16x9"><iframe data-external="1" src="https://www.youtube.com/embed/CSHlUZxwuQk" title="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe></div>
+<p>そのあたりはやはり向き不向きのあるところだろうと思うので、やりたいことの目的にあわせて、Rやほかの言語を賢く選択できればよいのかなと思います。</p>
+<script type="webr-data">
+eyJvcHRpb25zIjp7ImJhc2VVcmwiOiJodHRwczovL3dlYnIuci13YXNtLm9yZy92MC40LjIvIn0sInBhY2thZ2VzIjp7InBrZ3MiOlsiZXZhbHVhdGUiLCJrbml0ciIsImh0bWx0b29scyIsImRwbHlyIiwiZ2dwbG90MiIsImdnZngiLCJyYXNlbmdhbiIsInR3ZWVuciJdLCJyZXBvcyI6WyJodHRwczovL3BhaXRoaW92OTA5LnItdW5pdmVyc2UuZGV2Il19LCJyZW5kZXJfZGYiOiJkZWZhdWx0In0=
+</script>
+<script type="ojs-module-contents">
+eyJjb250ZW50cyI6W3siY2VsbE5hbWUiOiJ3ZWJyLXdpZGdldC03IiwiaW5saW5lIjpmYWxzZSwibWV0aG9kTmFtZSI6ImludGVycHJldFF1aWV0Iiwic291cmNlIjoie1xuICAvLyBXYWl0IGZvciBvdXRwdXQgdG8gYmUgd3JpdHRlbiB0byB0aGUgRE9NLCB0aGVuIHRyaWdnZXIgd2lkZ2V0IHJlbmRlcmluZ1xuICBhd2FpdCBfd2Vicl92YWx1ZV83O1xuICBpZiAod2luZG93LkhUTUxXaWRnZXRzKSB7XG4gICAgd2luZG93LkhUTUxXaWRnZXRzLnN0YXRpY1JlbmRlcigpO1xuICB9XG4gIGlmICh3aW5kb3cuUGFnZWRUYWJsZURvYykge1xuICAgIHdpbmRvdy5QYWdlZFRhYmxlRG9jLmluaXRBbGwoKTtcbiAgfVxufVxuIn0seyJjZWxsTmFtZSI6IndlYnItNyIsImlubGluZSI6ZmFsc2UsIm1ldGhvZE5hbWUiOiJpbnRlcnByZXQiLCJzb3VyY2UiOiJ2aWV3b2YgX3dlYnJfZWRpdG9yXzcgPSB7XG4gIGNvbnN0IHsgV2ViUkV4ZXJjaXNlRWRpdG9yLCBiNjREZWNvZGUgfSA9IHdpbmRvdy5fZXhlcmNpc2Vfb2pzX3J1bnRpbWU7XG4gIGNvbnN0IHNjcmlwdENvbnRlbnQgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKGBzY3JpcHRbdHlwZT1cXFwid2Vici03LWNvbnRlbnRzXFxcIl1gKS50ZXh0Q29udGVudDtcbiAgY29uc3QgYmxvY2sgPSBKU09OLnBhcnNlKGI2NERlY29kZShzY3JpcHRDb250ZW50KSk7XG5cbiAgY29uc3Qgb3B0aW9ucyA9IE9iamVjdC5hc3NpZ24oeyBpZDogYHdlYnItNy1jb250ZW50c2AgfSwgYmxvY2suYXR0cik7XG4gIGNvbnN0IGVkaXRvciA9IG5ldyBXZWJSRXhlcmNpc2VFZGl0b3Iod2ViUk9qcy53ZWJSUHJvbWlzZSwgYmxvY2suY29kZSwgb3B0aW9ucyk7XG5cbiAgcmV0dXJuIGVkaXRvci5jb250YWluZXI7XG59XG5fd2Vicl92YWx1ZV83ID0gd2ViUk9qcy5wcm9jZXNzKF93ZWJyX2VkaXRvcl83LCB7bn0pO1xuIn0seyJjZWxsTmFtZSI6IndlYnItd2lkZ2V0LTYiLCJpbmxpbmUiOmZhbHNlLCJtZXRob2ROYW1lIjoiaW50ZXJwcmV0UXVpZXQiLCJzb3VyY2UiOiJ7XG4gIC8vIFdhaXQgZm9yIG91dHB1dCB0byBiZSB3cml0dGVuIHRvIHRoZSBET00sIHRoZW4gdHJpZ2dlciB3aWRnZXQgcmVuZGVyaW5nXG4gIGF3YWl0IF93ZWJyX3ZhbHVlXzY7XG4gIGlmICh3aW5kb3cuSFRNTFdpZGdldHMpIHtcbiAgICB3aW5kb3cuSFRNTFdpZGdldHMuc3RhdGljUmVuZGVyKCk7XG4gIH1cbiAgaWYgKHdpbmRvdy5QYWdlZFRhYmxlRG9jKSB7XG4gICAgd2luZG93LlBhZ2VkVGFibGVEb2MuaW5pdEFsbCgpO1xuICB9XG59XG4ifSx7ImNlbGxOYW1lIjoid2Vici02IiwiaW5saW5lIjpmYWxzZSwibWV0aG9kTmFtZSI6ImludGVycHJldCIsInNvdXJjZSI6InZpZXdvZiBfd2Vicl9lZGl0b3JfNiA9IHtcbiAgY29uc3QgeyBXZWJSRXhlcmNpc2VFZGl0b3IsIGI2NERlY29kZSB9ID0gd2luZG93Ll9leGVyY2lzZV9vanNfcnVudGltZTtcbiAgY29uc3Qgc2NyaXB0Q29udGVudCA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoYHNjcmlwdFt0eXBlPVxcXCJ3ZWJyLTYtY29udGVudHNcXFwiXWApLnRleHRDb250ZW50O1xuICBjb25zdCBibG9jayA9IEpTT04ucGFyc2UoYjY0RGVjb2RlKHNjcmlwdENvbnRlbnQpKTtcblxuICBjb25zdCBvcHRpb25zID0gT2JqZWN0LmFzc2lnbih7IGlkOiBgd2Vici02LWNvbnRlbnRzYCB9LCBibG9jay5hdHRyKTtcbiAgY29uc3QgZWRpdG9yID0gbmV3IFdlYlJFeGVyY2lzZUVkaXRvcih3ZWJST2pzLndlYlJQcm9taXNlLCBibG9jay5jb2RlLCBvcHRpb25zKTtcblxuICByZXR1cm4gZWRpdG9yLmNvbnRhaW5lcjtcbn1cbl93ZWJyX3ZhbHVlXzYgPSB3ZWJST2pzLnByb2Nlc3MoX3dlYnJfZWRpdG9yXzYsIHt9KTtcbiJ9LHsiY2VsbE5hbWUiOiJ3ZWJyLXdpZGdldC01IiwiaW5saW5lIjpmYWxzZSwibWV0aG9kTmFtZSI6ImludGVycHJldFF1aWV0Iiwic291cmNlIjoie1xuICAvLyBXYWl0IGZvciBvdXRwdXQgdG8gYmUgd3JpdHRlbiB0byB0aGUgRE9NLCB0aGVuIHRyaWdnZXIgd2lkZ2V0IHJlbmRlcmluZ1xuICBhd2FpdCBfd2Vicl92YWx1ZV81O1xuICBpZiAod2luZG93LkhUTUxXaWRnZXRzKSB7XG4gICAgd2luZG93LkhUTUxXaWRnZXRzLnN0YXRpY1JlbmRlcigpO1xuICB9XG4gIGlmICh3aW5kb3cuUGFnZWRUYWJsZURvYykge1xuICAgIHdpbmRvdy5QYWdlZFRhYmxlRG9jLmluaXRBbGwoKTtcbiAgfVxufVxuIn0seyJjZWxsTmFtZSI6IndlYnItNSIsImlubGluZSI6ZmFsc2UsIm1ldGhvZE5hbWUiOiJpbnRlcnByZXQiLCJzb3VyY2UiOiJ2aWV3b2YgX3dlYnJfZWRpdG9yXzUgPSB7XG4gIGNvbnN0IHsgV2ViUkV4ZXJjaXNlRWRpdG9yLCBiNjREZWNvZGUgfSA9IHdpbmRvdy5fZXhlcmNpc2Vfb2pzX3J1bnRpbWU7XG4gIGNvbnN0IHNjcmlwdENvbnRlbnQgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKGBzY3JpcHRbdHlwZT1cXFwid2Vici01LWNvbnRlbnRzXFxcIl1gKS50ZXh0Q29udGVudDtcbiAgY29uc3QgYmxvY2sgPSBKU09OLnBhcnNlKGI2NERlY29kZShzY3JpcHRDb250ZW50KSk7XG5cbiAgY29uc3Qgb3B0aW9ucyA9IE9iamVjdC5hc3NpZ24oeyBpZDogYHdlYnItNS1jb250ZW50c2AgfSwgYmxvY2suYXR0cik7XG4gIGNvbnN0IGVkaXRvciA9IG5ldyBXZWJSRXhlcmNpc2VFZGl0b3Iod2ViUk9qcy53ZWJSUHJvbWlzZSwgYmxvY2suY29kZSwgb3B0aW9ucyk7XG5cbiAgcmV0dXJuIGVkaXRvci5jb250YWluZXI7XG59XG5fd2Vicl92YWx1ZV81ID0gd2ViUk9qcy5wcm9jZXNzKF93ZWJyX2VkaXRvcl81LCB7fSk7XG4ifSx7ImNlbGxOYW1lIjoid2Vici13aWRnZXQtNCIsImlubGluZSI6ZmFsc2UsIm1ldGhvZE5hbWUiOiJpbnRlcnByZXRRdWlldCIsInNvdXJjZSI6IntcbiAgLy8gV2FpdCBmb3Igb3V0cHV0IHRvIGJlIHdyaXR0ZW4gdG8gdGhlIERPTSwgdGhlbiB0cmlnZ2VyIHdpZGdldCByZW5kZXJpbmdcbiAgYXdhaXQgX3dlYnJfdmFsdWVfNDtcbiAgaWYgKHdpbmRvdy5IVE1MV2lkZ2V0cykge1xuICAgIHdpbmRvdy5IVE1MV2lkZ2V0cy5zdGF0aWNSZW5kZXIoKTtcbiAgfVxuICBpZiAod2luZG93LlBhZ2VkVGFibGVEb2MpIHtcbiAgICB3aW5kb3cuUGFnZWRUYWJsZURvYy5pbml0QWxsKCk7XG4gIH1cbn1cbiJ9LHsiY2VsbE5hbWUiOiJ3ZWJyLTQiLCJpbmxpbmUiOmZhbHNlLCJtZXRob2ROYW1lIjoiaW50ZXJwcmV0Iiwic291cmNlIjoidmlld29mIF93ZWJyX2VkaXRvcl80ID0ge1xuICBjb25zdCB7IFdlYlJFeGVyY2lzZUVkaXRvciwgYjY0RGVjb2RlIH0gPSB3aW5kb3cuX2V4ZXJjaXNlX29qc19ydW50aW1lO1xuICBjb25zdCBzY3JpcHRDb250ZW50ID0gZG9jdW1lbnQucXVlcnlTZWxlY3Rvcihgc2NyaXB0W3R5cGU9XFxcIndlYnItNC1jb250ZW50c1xcXCJdYCkudGV4dENvbnRlbnQ7XG4gIGNvbnN0IGJsb2NrID0gSlNPTi5wYXJzZShiNjREZWNvZGUoc2NyaXB0Q29udGVudCkpO1xuXG4gIGNvbnN0IG9wdGlvbnMgPSBPYmplY3QuYXNzaWduKHsgaWQ6IGB3ZWJyLTQtY29udGVudHNgIH0sIGJsb2NrLmF0dHIpO1xuICBjb25zdCBlZGl0b3IgPSBuZXcgV2ViUkV4ZXJjaXNlRWRpdG9yKHdlYlJPanMud2ViUlByb21pc2UsIGJsb2NrLmNvZGUsIG9wdGlvbnMpO1xuXG4gIHJldHVybiBlZGl0b3IuY29udGFpbmVyO1xufVxuX3dlYnJfdmFsdWVfNCA9IHdlYlJPanMucHJvY2Vzcyhfd2Vicl9lZGl0b3JfNCwge30pO1xuIn0seyJjZWxsTmFtZSI6IndlYnItd2lkZ2V0LTMiLCJpbmxpbmUiOmZhbHNlLCJtZXRob2ROYW1lIjoiaW50ZXJwcmV0UXVpZXQiLCJzb3VyY2UiOiJ7XG4gIC8vIFdhaXQgZm9yIG91dHB1dCB0byBiZSB3cml0dGVuIHRvIHRoZSBET00sIHRoZW4gdHJpZ2dlciB3aWRnZXQgcmVuZGVyaW5nXG4gIGF3YWl0IF93ZWJyX3ZhbHVlXzM7XG4gIGlmICh3aW5kb3cuSFRNTFdpZGdldHMpIHtcbiAgICB3aW5kb3cuSFRNTFdpZGdldHMuc3RhdGljUmVuZGVyKCk7XG4gIH1cbiAgaWYgKHdpbmRvdy5QYWdlZFRhYmxlRG9jKSB7XG4gICAgd2luZG93LlBhZ2VkVGFibGVEb2MuaW5pdEFsbCgpO1xuICB9XG59XG4ifSx7ImNlbGxOYW1lIjoid2Vici0zIiwiaW5saW5lIjpmYWxzZSwibWV0aG9kTmFtZSI6ImludGVycHJldCIsInNvdXJjZSI6InZpZXdvZiBfd2Vicl9lZGl0b3JfMyA9IHtcbiAgY29uc3QgeyBXZWJSRXhlcmNpc2VFZGl0b3IsIGI2NERlY29kZSB9ID0gd2luZG93Ll9leGVyY2lzZV9vanNfcnVudGltZTtcbiAgY29uc3Qgc2NyaXB0Q29udGVudCA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoYHNjcmlwdFt0eXBlPVxcXCJ3ZWJyLTMtY29udGVudHNcXFwiXWApLnRleHRDb250ZW50O1xuICBjb25zdCBibG9jayA9IEpTT04ucGFyc2UoYjY0RGVjb2RlKHNjcmlwdENvbnRlbnQpKTtcblxuICBjb25zdCBvcHRpb25zID0gT2JqZWN0LmFzc2lnbih7IGlkOiBgd2Vici0zLWNvbnRlbnRzYCB9LCBibG9jay5hdHRyKTtcbiAgY29uc3QgZWRpdG9yID0gbmV3IFdlYlJFeGVyY2lzZUVkaXRvcih3ZWJST2pzLndlYlJQcm9taXNlLCBibG9jay5jb2RlLCBvcHRpb25zKTtcblxuICByZXR1cm4gZWRpdG9yLmNvbnRhaW5lcjtcbn1cbl93ZWJyX3ZhbHVlXzMgPSB3ZWJST2pzLnByb2Nlc3MoX3dlYnJfZWRpdG9yXzMsIHt9KTtcbiJ9LHsiY2VsbE5hbWUiOiJ3ZWJyLXdpZGdldC0yIiwiaW5saW5lIjpmYWxzZSwibWV0aG9kTmFtZSI6ImludGVycHJldFF1aWV0Iiwic291cmNlIjoie1xuICAvLyBXYWl0IGZvciBvdXRwdXQgdG8gYmUgd3JpdHRlbiB0byB0aGUgRE9NLCB0aGVuIHRyaWdnZXIgd2lkZ2V0IHJlbmRlcmluZ1xuICBhd2FpdCBfd2Vicl92YWx1ZV8yO1xuICBpZiAod2luZG93LkhUTUxXaWRnZXRzKSB7XG4gICAgd2luZG93LkhUTUxXaWRnZXRzLnN0YXRpY1JlbmRlcigpO1xuICB9XG4gIGlmICh3aW5kb3cuUGFnZWRUYWJsZURvYykge1xuICAgIHdpbmRvdy5QYWdlZFRhYmxlRG9jLmluaXRBbGwoKTtcbiAgfVxufVxuIn0seyJjZWxsTmFtZSI6IndlYnItMiIsImlubGluZSI6ZmFsc2UsIm1ldGhvZE5hbWUiOiJpbnRlcnByZXQiLCJzb3VyY2UiOiJ2aWV3b2YgX3dlYnJfZWRpdG9yXzIgPSB7XG4gIGNvbnN0IHsgV2ViUkV4ZXJjaXNlRWRpdG9yLCBiNjREZWNvZGUgfSA9IHdpbmRvdy5fZXhlcmNpc2Vfb2pzX3J1bnRpbWU7XG4gIGNvbnN0IHNjcmlwdENvbnRlbnQgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKGBzY3JpcHRbdHlwZT1cXFwid2Vici0yLWNvbnRlbnRzXFxcIl1gKS50ZXh0Q29udGVudDtcbiAgY29uc3QgYmxvY2sgPSBKU09OLnBhcnNlKGI2NERlY29kZShzY3JpcHRDb250ZW50KSk7XG5cbiAgY29uc3Qgb3B0aW9ucyA9IE9iamVjdC5hc3NpZ24oeyBpZDogYHdlYnItMi1jb250ZW50c2AgfSwgYmxvY2suYXR0cik7XG4gIGNvbnN0IGVkaXRvciA9IG5ldyBXZWJSRXhlcmNpc2VFZGl0b3Iod2ViUk9qcy53ZWJSUHJvbWlzZSwgYmxvY2suY29kZSwgb3B0aW9ucyk7XG5cbiAgcmV0dXJuIGVkaXRvci5jb250YWluZXI7XG59XG5fd2Vicl92YWx1ZV8yID0gd2ViUk9qcy5wcm9jZXNzKF93ZWJyX2VkaXRvcl8yLCB7fSk7XG4ifSx7ImNlbGxOYW1lIjoid2Vici13aWRnZXQtMSIsImlubGluZSI6ZmFsc2UsIm1ldGhvZE5hbWUiOiJpbnRlcnByZXRRdWlldCIsInNvdXJjZSI6IntcbiAgLy8gV2FpdCBmb3Igb3V0cHV0IHRvIGJlIHdyaXR0ZW4gdG8gdGhlIERPTSwgdGhlbiB0cmlnZ2VyIHdpZGdldCByZW5kZXJpbmdcbiAgYXdhaXQgX3dlYnJfdmFsdWVfMTtcbiAgaWYgKHdpbmRvdy5IVE1MV2lkZ2V0cykge1xuICAgIHdpbmRvdy5IVE1MV2lkZ2V0cy5zdGF0aWNSZW5kZXIoKTtcbiAgfVxuICBpZiAod2luZG93LlBhZ2VkVGFibGVEb2MpIHtcbiAgICB3aW5kb3cuUGFnZWRUYWJsZURvYy5pbml0QWxsKCk7XG4gIH1cbn1cbiJ9LHsiY2VsbE5hbWUiOiJ3ZWJyLTEiLCJpbmxpbmUiOmZhbHNlLCJtZXRob2ROYW1lIjoiaW50ZXJwcmV0Iiwic291cmNlIjoidmlld29mIF93ZWJyX2VkaXRvcl8xID0ge1xuICBjb25zdCB7IFdlYlJFeGVyY2lzZUVkaXRvciwgYjY0RGVjb2RlIH0gPSB3aW5kb3cuX2V4ZXJjaXNlX29qc19ydW50aW1lO1xuICBjb25zdCBzY3JpcHRDb250ZW50ID0gZG9jdW1lbnQucXVlcnlTZWxlY3Rvcihgc2NyaXB0W3R5cGU9XFxcIndlYnItMS1jb250ZW50c1xcXCJdYCkudGV4dENvbnRlbnQ7XG4gIGNvbnN0IGJsb2NrID0gSlNPTi5wYXJzZShiNjREZWNvZGUoc2NyaXB0Q29udGVudCkpO1xuXG4gIGNvbnN0IG9wdGlvbnMgPSBPYmplY3QuYXNzaWduKHsgaWQ6IGB3ZWJyLTEtY29udGVudHNgIH0sIGJsb2NrLmF0dHIpO1xuICBjb25zdCBlZGl0b3IgPSBuZXcgV2ViUkV4ZXJjaXNlRWRpdG9yKHdlYlJPanMud2ViUlByb21pc2UsIGJsb2NrLmNvZGUsIG9wdGlvbnMpO1xuXG4gIHJldHVybiBlZGl0b3IuY29udGFpbmVyO1xufVxuX3dlYnJfdmFsdWVfMSA9IHdlYlJPanMucHJvY2Vzcyhfd2Vicl9lZGl0b3JfMSwge30pO1xuIn0seyJjZWxsTmFtZSI6IndlYnItcHJlbHVkZSIsImlubGluZSI6ZmFsc2UsIm1ldGhvZE5hbWUiOiJpbnRlcnByZXRRdWlldCIsInNvdXJjZSI6IndlYlJPanMgPSB7XG4gIGNvbnN0IHsgV2ViUiwgQ2hhbm5lbFR5cGUgfSA9IHdpbmRvdy5fZXhlcmNpc2Vfb2pzX3J1bnRpbWUuV2ViUjtcbiAgY29uc3Qge1xuICAgIFdlYlJFdmFsdWF0b3IsXG4gICAgV2ViUkVudmlyb25tZW50TWFuYWdlcixcbiAgICBzZXR1cFIsXG4gICAgYjY0RGVjb2RlLFxuICAgIGNvbGxhcHNlUGF0aFxuICB9ID0gd2luZG93Ll9leGVyY2lzZV9vanNfcnVudGltZTtcblxuICBjb25zdCBzdGF0dXNDb250YWluZXIgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZChcImV4ZXJjaXNlLWxvYWRpbmctc3RhdHVzXCIpO1xuICBjb25zdCBpbmRpY2F0b3JDb250YWluZXIgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZChcImV4ZXJjaXNlLWxvYWRpbmctaW5kaWNhdG9yXCIpO1xuICBpbmRpY2F0b3JDb250YWluZXIuY2xhc3NMaXN0LnJlbW92ZShcImQtbm9uZVwiKTtcblxuICBsZXQgc3RhdHVzVGV4dCA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoXCJkaXZcIilcbiAgc3RhdHVzVGV4dC5jbGFzc0xpc3QgPSBcImV4ZXJjaXNlLWxvYWRpbmctZGV0YWlsc1wiO1xuICBzdGF0dXNUZXh0ID0gc3RhdHVzQ29udGFpbmVyLmFwcGVuZENoaWxkKHN0YXR1c1RleHQpO1xuICBzdGF0dXNUZXh0LnRleHRDb250ZW50ID0gYEluaXRpYWxpc2VgO1xuXG4gIC8vIEhvaXN0IGluZGljYXRvciBvdXQgZnJvbSBmaW5hbCBzbGlkZSB3aGVuIHJ1bm5pbmcgdW5kZXIgcmV2ZWFsXG4gIGNvbnN0IHJldmVhbFN0YXR1cyA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoXCIucmV2ZWFsIC5leGVyY2lzZS1sb2FkaW5nLWluZGljYXRvclwiKTtcbiAgaWYgKHJldmVhbFN0YXR1cykge1xuICAgIHJldmVhbFN0YXR1cy5yZW1vdmUoKTtcbiAgICBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKFwiLnJldmVhbCA+IC5zbGlkZXNcIikuYXBwZW5kQ2hpbGQocmV2ZWFsU3RhdHVzKTtcbiAgfVxuXG4gIC8vIE1ha2UgYW55IHJldmVhbCBzbGlkZXMgd2l0aCBsaXZlIGNlbGxzIHNjcm9sbGFibGVcbiAgZG9jdW1lbnQucXVlcnlTZWxlY3RvckFsbChcIi5yZXZlYWwgLmV4ZXJjaXNlLWNlbGxcIikuZm9yRWFjaCgoZWwpID0+IHtcbiAgICBlbC5jbG9zZXN0KCdzZWN0aW9uLnNsaWRlJykuY2xhc3NMaXN0LmFkZChcInNjcm9sbGFibGVcIik7XG4gIH0pXG5cbiAgLy8gd2ViUiBzdXBwbGVtZW50YWwgZGF0YSBhbmQgb3B0aW9uc1xuICBjb25zdCBkYXRhQ29udGVudCA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoYHNjcmlwdFt0eXBlPVxcXCJ3ZWJyLWRhdGFcXFwiXWApLnRleHRDb250ZW50O1xuICBjb25zdCBkYXRhID0gSlNPTi5wYXJzZShiNjREZWNvZGUoZGF0YUNvbnRlbnQpKTtcblxuICAvLyBHcmFiIGxpc3Qgb2YgcmVzb3VyY2VzIHRvIGJlIGRvd25sb2FkZWRcbiAgY29uc3QgZmlsZXNDb250ZW50ID0gZG9jdW1lbnQucXVlcnlTZWxlY3Rvcihgc2NyaXB0W3R5cGU9XFxcInZmcy1maWxlXFxcIl1gKS50ZXh0Q29udGVudDtcbiAgY29uc3QgZmlsZXMgPSBKU09OLnBhcnNlKGI2NERlY29kZShmaWxlc0NvbnRlbnQpKTtcblxuICAvLyBVc2UgUG9zdE1lc3NhZ2UgY2hhbm5lbCBmb3IgYXN5bmMgY29tbXVuaWNhdGlvblxuICAvLyBXZSBkbyBub3QgZXhwZWN0IHRvIHRha2UgbmVzdGVkIHByb21wdCBpbnB1dCBpbiBRdWFydG8gTGl2ZSBjZWxsc1xuICBkYXRhLm9wdGlvbnMuY2hhbm5lbFR5cGUgPSBDaGFubmVsVHlwZS5Qb3N0TWVzc2FnZTtcblxuICAvLyBJbml0aWFsaXNlIHdlYlIgYW5kIHNldHVwIGZvciBSIGNvZGUgZXZhbHVhdGlvblxuICBsZXQgd2ViUlByb21pc2UgPSAoYXN5bmMgKHdlYlIpID0+IHtcbiAgICBzdGF0dXNUZXh0LnRleHRDb250ZW50ID0gYERvd25sb2FkaW5nIHdlYlJgO1xuICAgIGF3YWl0IHdlYlIuaW5pdCgpO1xuXG4gICAgLy8gSW5zdGFsbCBwcm92aWRlZCBsaXN0IG9mIHBhY2thZ2VzXG4gICAgLy8gRW5zdXJlIHdlYlIgZGVmYXVsdCByZXBvIGlzIGluY2x1ZGVkXG4gICAgZGF0YS5wYWNrYWdlcy5yZXBvcy5wdXNoKFwiaHR0cHM6Ly9yZXBvLnItd2FzbS5vcmdcIilcbiAgICBhd2FpdCBkYXRhLnBhY2thZ2VzLnBrZ3MubWFwKChwa2cpID0+ICgpID0+IHtcbiAgICAgIHN0YXR1c1RleHQudGV4dENvbnRlbnQgPSBgRG93bmxvYWRpbmcgcGFja2FnZTogJHtwa2d9YDtcbiAgICAgIHJldHVybiB3ZWJSLmV2YWxSVm9pZChgXG4gICAgICAgIHdlYnI6Omluc3RhbGwocGtnLCByZXBvcyA9IHJlcG9zKVxuICAgICAgICBsaWJyYXJ5KHBrZywgY2hhcmFjdGVyLm9ubHkgPSBUUlVFKVxuICAgICAgYCwgeyBlbnY6IHtcbiAgICAgICAgcGtnOiBwa2csXG4gICAgICAgIHJlcG9zOiBkYXRhLnBhY2thZ2VzLnJlcG9zLFxuICAgICAgfX0pO1xuICAgIH0pLnJlZHVjZSgoY3VyLCBuZXh0KSA9PiBjdXIudGhlbihuZXh0KSwgUHJvbWlzZS5yZXNvbHZlKCkpO1xuXG4gICAgLy8gRG93bmxvYWQgYW5kIGluc3RhbGwgcmVzb3VyY2VzXG4gICAgYXdhaXQgZmlsZXMubWFwKChmaWxlKSA9PiBhc3luYyAoKSA9PiB7XG4gICAgICBjb25zdCBuYW1lID0gZmlsZS5zdWJzdHJpbmcoZmlsZS5sYXN0SW5kZXhPZignLycpICsgMSk7XG4gICAgICBzdGF0dXNUZXh0LnRleHRDb250ZW50ID0gYERvd25sb2FkaW5nIHJlc291cmNlOiAke25hbWV9YDtcbiAgICAgIGNvbnN0IHJlc3BvbnNlID0gYXdhaXQgZmV0Y2goZmlsZSk7XG4gICAgICBpZiAoIXJlc3BvbnNlLm9rKSB7XG4gICAgICAgIHRocm93IG5ldyBFcnJvcihgQ2FuJ3QgZG93bmxvYWQgXFxgJHtmaWxlfVxcYC4gRXJyb3IgJHtyZXNwb25zZS5zdGF0dXN9OiBcIiR7cmVzcG9uc2Uuc3RhdHVzVGV4dH1cIi5gKTtcbiAgICAgIH1cbiAgICAgIGNvbnN0IGRhdGEgPSBhd2FpdCByZXNwb25zZS5hcnJheUJ1ZmZlcigpO1xuXG4gICAgICAvLyBTdG9yZSBVUkxzIGluIHRoZSBjd2Qgd2l0aG91dCBhbnkgc3ViZGlyZWN0b3J5IHN0cnVjdHVyZVxuICAgICAgaWYgKGZpbGUuaW5jbHVkZXMoXCI6Ly9cIikpIHtcbiAgICAgICAgZmlsZSA9IG5hbWU7XG4gICAgICB9XG5cbiAgICAgIC8vIENvbGxhcHNlIGhpZ2hlciBkaXJlY3Rvcnkgc3RydWN0dXJlXG4gICAgICBmaWxlID0gY29sbGFwc2VQYXRoKGZpbGUpO1xuXG4gICAgICAvLyBDcmVhdGUgZGlyZWN0b3J5IHRyZWUsIGlnbm9yaW5nIFwiZGlyZWN0b3J5IGV4aXN0c1wiIFZGUyBlcnJvcnNcbiAgICAgIGNvbnN0IHBhcnRzID0gZmlsZS5zcGxpdCgnLycpLnNsaWNlKDAsIC0xKTtcbiAgICAgIGxldCBwYXRoID0gJyc7XG4gICAgICB3aGlsZSAocGFydHMubGVuZ3RoID4gMCkge1xuICAgICAgICBwYXRoICs9IHBhcnRzLnNoaWZ0KCkgKyAnLyc7XG4gICAgICAgIHRyeSB7XG4gICAgICAgICAgYXdhaXQgd2ViUi5GUy5ta2RpcihwYXRoKTtcbiAgICAgICAgfSBjYXRjaCAoZSkge1xuICAgICAgICAgIGlmICghZS5tZXNzYWdlLmluY2x1ZGVzKFwiRlMgZXJyb3JcIikpIHtcbiAgICAgICAgICAgIHRocm93IGU7XG4gICAgICAgICAgfVxuICAgICAgICB9XG4gICAgICB9XG5cbiAgICAgIC8vIFdyaXRlIHRoaXMgZmlsZSB0byB0aGUgVkZTXG4gICAgICByZXR1cm4gYXdhaXQgd2ViUi5GUy53cml0ZUZpbGUoZmlsZSwgbmV3IFVpbnQ4QXJyYXkoZGF0YSkpO1xuICAgIH0pLnJlZHVjZSgoY3VyLCBuZXh0KSA9PiBjdXIudGhlbihuZXh0KSwgUHJvbWlzZS5yZXNvbHZlKCkpO1xuXG4gICAgc3RhdHVzVGV4dC50ZXh0Q29udGVudCA9IGBJbnN0YWxsaW5nIHdlYlIgc2hpbXNgO1xuICAgIGF3YWl0IHdlYlIuZXZhbFJWb2lkKGB3ZWJyOjpzaGltX2luc3RhbGwoKWApO1xuXG4gICAgc3RhdHVzVGV4dC50ZXh0Q29udGVudCA9IGBXZWJSIGVudmlyb25tZW50IHNldHVwYDtcbiAgICBhd2FpdCBzZXR1cFIod2ViUiwgZGF0YSk7XG5cbiAgICBzdGF0dXNUZXh0LnJlbW92ZSgpO1xuICAgIGlmIChzdGF0dXNDb250YWluZXIuY2hpbGRyZW4ubGVuZ3RoID09IDApIHtcbiAgICAgIHN0YXR1c0NvbnRhaW5lci5wYXJlbnROb2RlLnJlbW92ZSgpO1xuICAgIH1cbiAgICByZXR1cm4gd2ViUjtcbiAgfSkobmV3IFdlYlIoZGF0YS5vcHRpb25zKSk7XG5cbiAgLy8gS2VlcCB0cmFjayBvZiBpbml0aWFsIE9KUyBibG9jayByZW5kZXJcbiAgY29uc3QgcmVuZGVyZWRPanMgPSB7fTtcblxuICBjb25zdCBwcm9jZXNzID0gYXN5bmMgKGNvbnRleHQsIGlucHV0cykgPT4ge1xuICAgIGNvbnN0IHdlYlIgPSBhd2FpdCB3ZWJSUHJvbWlzZTtcbiAgICBjb25zdCBldmFsdWF0b3IgPSBuZXcgV2ViUkV2YWx1YXRvcih3ZWJSLCBjb250ZXh0KVxuICAgIGF3YWl0IGV2YWx1YXRvci5wcm9jZXNzKGlucHV0cyk7XG4gICAgcmV0dXJuIGV2YWx1YXRvci5jb250YWluZXI7XG4gIH1cblxuICByZXR1cm4ge1xuICAgIHByb2Nlc3MsXG4gICAgd2ViUlByb21pc2UsXG4gICAgcmVuZGVyZWRPanMsXG4gIH07XG59XG4ifV19
+</script>
+<div id="exercise-loading-indicator" class="exercise-loading-indicator d-none d-flex align-items-center gap-2">
+<div id="exercise-loading-status" class="d-flex gap-2">
+
+</div>
+<div class="spinner-grow spinner-grow-sm">
+
+</div>
+</div>
+<script type="vfs-file">
+W10=
+</script>
+</section>
+
+
+<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>Rのグラフィックデバイスにもマウスでクリックした座標を受け取るAPIはあるにはあるのですが、それはグラフィックデバイスの実装によって対応状況が異なり、現状、まともに使うことはできません<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>tibbleは、それ自体の行数と、その行列の行数とが一致している場合にかぎり、このように列の値として行列を格納することができます。<code>tibble::tibble()</code>のヘルプに記載があるはずなので、読んでみてください<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section></div></main>
+<!-- /main column -->
+<script type="ojs-module-contents">
+eyJjb250ZW50cyI6W3sibWV0aG9kTmFtZSI6ImludGVycHJldCIsImNlbGxOYW1lIjoib2pzLWNlbGwtMSIsImlubGluZSI6ZmFsc2UsInNvdXJjZSI6InZpZXdvZiBuID0gSW5wdXRzLnJhbmdlKFsxLCA3NV0sIHtzdGVwOiAxLCBsYWJlbDogXCLjg5Xjg6zjg7zjg6Dnlarlj7dcIn0pXG4ifSx7Im1ldGhvZE5hbWUiOiJpbnRlcnByZXRRdWlldCIsInNvdXJjZSI6InNoaW55SW5wdXQoJ24nKSJ9XX0=
+</script>
+<script type="module">
+if (window.location.protocol === "file:") { alert("The OJS runtime does not work with file:// URLs. Please use a web server to view this document."); }
+window._ojs.paths.runtimeToDoc = "../../..";
+window._ojs.paths.runtimeToRoot = "../../../../..";
+window._ojs.paths.docToRoot = "../..";
+window._ojs.selfContained = false;
+window._ojs.runtime.interpretFromScriptTags();
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+            // default icon
+            link.classList.add("external");
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<script>videojs(video_shortcode_videojs_video1);</script>
+
+
+
+
+<script src="index_files/libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

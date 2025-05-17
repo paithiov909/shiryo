@@ -1,0 +1,400 @@
+---
+title: "R言語の遊び方"
+author: "Akiru Kato（paithiov909）"
+subtitle: "ggplot2でかっこいいアニメーションをつくろう"
+date: "2025-05-17"
+description: |
+  dplyrやggplot2などを使って少しずつ変化するプロットを作成し、アニメーションさせるコードを紹介します。R言語を使っていますが、統計やデータ分析の話は出てきません
+fig-width: 8
+fig-height: 6
+engine: knitr
+format:
+  live-html:
+    toc: true
+    link-external-icon: true
+    link-external-newwindow: true
+    smooth-scroll: true
+    include-in-header: header.html
+    other-links:
+      - name: GitHub
+        text: GitHub Repo
+        href: https://github.com/paithiov909/shiryo
+    mainfont: |
+      -apple-system, "BlinkMacSystemFont", "Helvetica Neue", Helvetica, "Arial", "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"
+    webr:
+      packages:
+        - dplyr
+        - ggplot2
+        - ggfx
+        - rasengan
+        - tweenr
+      repos:
+        - https://paithiov909.r-universe.dev
+---
+
+{{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
+
+## はじめに
+
+先日、次のような動画（[YouTube](https://youtube.com/shorts/64mzzZbXgdc?feature=share)でも見れます）をつくりました。この記事は、この動画をつくるのに使ったR言語のコードの一部を整理したうえで紹介するものです。
+
+:::{#yt-short}
+{{< video ./magical-trail-vert.mp4 aspect-ratio="9x16" height="480" >}}
+
+> A short animation inspired by the [Magical trail shader](https://openprocessing.org/sketch/835887) created by Jason Labbe using p5.js. Three animated scenes were generated in R and combined using a video editor.
+:::
+
+この動画は、3つのシーンから構成されています。各シーンでは1本ずつシアンの曲線が軌跡として描画されていて、軌跡が描かれるのにしたがって、軌跡が通過したあたりから黄色のパーティクルが出現しています。ここでは、これら3つのシーンのうち、3番めのシーンのような、シンプルな直線の軌跡とともにパーティクルを描くコードを見ていきます。
+
+Rは、しばしば、統計やデータ分析を便利におこなうのに特化したプログラミング言語として紹介されます。実際、この記事を読んでいる読者の多くも、おそらく第一には、Rは仕事や研究のための道具であると考えていることでしょう。この記事は、特段そういう考え方を否定するものではありませんが、私がここで伝えたいと思っているのは、私たちは、もっとRを自由に使うことができるのではないかということです。
+
+たとえば、大工になるためにノコギリで音楽を奏でることに習熟する必要はない気がしますが、ノコギリで音楽を奏でてみることは、きっと、ノコギリがどんな道具なのかを知るための手がかりになることでしょう。みなさんが、この記事をきっかけとして、Rがどんな道具であり、どのような点が便利なのかを再発見してくれたらうれしいです。
+
+このページは[quarto-live](https://github.com/r-wasm/quarto-live)を使っているので、次のようなコードブロックはWebRで実際に実行してみることができます。試しに"Run Code"を押してみてください。
+
+```{webr}
+#| label: setup
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(ggplot2)
+})
+
+bg_col <- "#2b2b2b"
+
+canvas <-
+  ggplot() +
+  xlim(0, dev.size(units = "px")[1]) +
+  ylim(0, dev.size(units = "px")[2]) +
+  theme_void() +
+  theme(
+    plot.background = element_rect(
+      fill = bg_col, color = bg_col
+    ),
+    legend.position = "none",
+    plot.margin = unit(c(0, 0, 0, 0), "cm")
+  ) +
+  scale_color_continuous(low = "#ebeb00", high = "#ffff89")
+
+print(canvas)
+```
+
+この上に黒い画像が表示されたはずです。このggplotオブジェクトをキャンバスとして使うことにして、まずは、ここに`geom_point()`で描き加えるための点列を用意していきましょう。
+
+
+## データの準備
+
+### 軌跡のデータ
+
+早速ですが、みなさんは、Rで先ほど見たような軌跡を用意する方法を知っていますか？
+
+![](./magical-trail.gif){height="320px" fig-alt="シンプルな直線の軌跡"}
+
+たとえばこんな軌跡を描きたいと思っているのですが、これはどうやって描けばよいのでしょうか。このシアンの軌跡をよく観察すると、これは始点と終点をまっすぐに結んだだけの直線ではなく、見た感じ、手描きの線のようにランダムに揺らいでいる線であることがわかります。
+
+そもそも、私がこれをつくるのに参考にした[Magical trail shader](https://openprocessing.org/sketch/835887)は、p5.jsで書かれている作品で、マウスカーソルの位置を入力として受け取って、軌跡を描画する仕組みのものです。一方、私たちが使っているR言語のグラフィックデバイスでは、p5.jsのキャンバスのように、マウスカーソルがある位置を柔軟に取得することはできません。^[Rのグラフィックデバイスにもマウスでクリックした座標を受け取るAPIはあるにはあるのですが、それはグラフィックデバイスの実装によって対応状況が異なり、現状、まともに使うことはできません]
+
+したがって、このような軌跡を再現するには、私たちが何気なくマウスを動かしたときのような軌跡を模倣するコードを書く必要があります。しかし、それはRで簡単に書くのは難しいため、ここではズルをすることにしましょう。[arevi/wind-mouse](https://github.com/arevi/wind-mouse)というJavaScriptのコードを元にして、マウスを動かしたときのような軌跡を生成するC++のコードを準備しました。次のRパッケージに収録しているので、これを使うことにします。
+
+- [paithiov909/rasengan: Generation of geometric curves](https://github.com/paithiov909/rasengan)
+
+具体的には`rasengan::wind_mouse()`という関数を使います。このrasenganパッケージは、このページのWebRの環境にはすでにインストールされているので、次のコードブロックから試せます。
+
+:::{.callout-note}
+WebRのコードブロックは、とりあえず掲載している順に1回ずつ、とばさずに実行していってください
+:::
+
+```{webr}
+#| label: mouse-trail
+gen_mouse_trail <- \(size, seed = sample.int(1337, 1), mouse_speed = 7) {
+  rasengan::wind_mouse(
+    start = c(runif(1, 0, size[1] / 2), runif(1, 0, size[2])),
+    end = c(runif(1, size[1] / 2, size[1]), runif(1, size[2] / 2, size[2])),
+    mouse_speed = mouse_speed,
+    seed = seed
+  ) |>
+    dplyr::mutate(id = dplyr::row_number()) |>
+    dplyr::as_tibble()
+}
+
+dat <- gen_mouse_trail(size = dev.size(units = "px"))
+
+gp <- canvas +
+  geom_point(data = dat, aes(x = x, y = y, color = id))
+
+print(gp)
+```
+
+ここでは、先ほど用意したキャンバスに、生成した点列を黄色の点として描画しています。何回か"Run Code"を押してもらうとわかると思いますが、この関数は`start`から`end`までのあいだを手描き風に結んだ点列をデータフレームとして返します。ここでは、軌跡のデータ`dat`は`x`, `y`, `t`と`id`列の4列からなり、キャンバスの左半分のどこかから、右半分のどこかに向かう線がランダムに描かれるようにしています。
+
+
+### パーティクルのデータ
+
+次に、パーティクルの元となるデータをつくっておきます。見本のアニメーションをもう一度見てみましょう。
+
+![](./magical-trail.gif){height="320px" fig-alt="シンプルな直線の軌跡"}
+
+黄色のパーティクルに注目すると、軌跡に伴われるパーティクルは、軌跡が通過したあたりから順に出現して、それぞれのスピード・方向をもって移動していることがわかると思います。つまり、パーティクルの元データ`particles`は、パーティクルの出現位置となる、軌跡の各時刻におけるx, y座標と、速度`velocity`、また、それぞれのパーティクルが向かう方向`angle`を保持している必要があります。
+
+次のような感じです。
+
+```{webr}
+#| label: particles
+mag <- \(d) {
+  ret <-
+    dist(d) |>
+    as.vector() |>
+    _[rlang::as_function(~ {
+      # pull out the diagonal elements of the dist matrix
+      n <- nrow(d)
+      i <- seq_len(n)
+      i + (i - 1) * (n - 1) - (i - 1) * i / 2
+    })()]
+  ret
+}
+
+particles <- dat |>
+  dplyr::reframe(
+    t = t,
+    position = matrix(c(x, y, rep_len(1, dplyr::n())), ncol = 3),
+    velocity = matrix(
+      c(
+        dplyr::lag(x, default = dplyr::first(x)) / dev.size(units = "px")[1],
+        dplyr::lag(y, default = dplyr::first(y)) / dev.size(units = "px")[2]
+      ) * runif(dplyr::n(), 1, 10) * ifelse(t %% 2, -1, 1),
+      ncol = 2
+    ),
+    angle = runif(dplyr::n(), -pi / 6, pi / 6),
+    air_drag = runif(dplyr::n(), 0.92, 0.98),
+    mass = runif(dplyr::n(), 3, 8),
+    color = sample.int(5, dplyr::n(), replace = TRUE)
+  ) |>
+  dplyr::filter(dplyr::row_number() %in% which(mag(position) > 5))
+
+particles
+```
+
+なお、`rasengan::wind_mouse()`の仕様で、生成された軌跡の点列では、2点のあいだの移動量にムラがあります。ここでは、すべての時刻における点からパーティクルを発生させるのではなく、一つ後ろの点への移動量が`5`に満たない場合には、パーティクルを新たに出さないように設計しています。`mag()`はその計算のためのスニペットで、行列かデータフレームを受け取って、各行について一つ後ろの行とのあいだのユークリッド距離を返しているものです。
+
+ちなみに、ここで用意しているtibbleは`position`や`velocity`列の値として行列をもっています。dplyrやtidyrを使った通常のデータハンドリングにおいても、セルにtibbleをネストさせることはあるかもしれませんが、このように列の値に行列をもつことはあまりおこなわれないので、そもそもこういうかたちのtibbleをつくれることを知らなかった人もいるかもしれません。^[tibbleは、それ自体の行数と、その行列の行数とが一致している場合にかぎり、このように列の値として行列を格納することができます。`tibble::tibble()`のヘルプに記載があるはずなので、読んでみてください]
+
+ここでは、この後でやるように点列の位置をまとめてアフィン変換するのにXY座標を行列のかたちでもっておくと都合がよいため、このようにしています。
+
+
+## アニメーションの実装
+
+### 軌跡を切り取る
+
+それでは、実際にアニメーションをつくるためのコードを見ていきましょう。
+
+ggplot2と組み合わせてアニメーションをつくるには、ふつうは[gganimate](https://gganimate.com/)を使います。しかし、gganimateは基本的にデータフレーム中の`key`に応じて一つのグラフを描き分けることによって、アニメーションの各フレームを生成するといった仕組みのものであるため、ここでつくりたいようなアニメーションをgganimateでつくるためには、各フレームにおける軌跡とパーティクルの位置をあらかじめすべて計算してしまったうえで、それぞれを巨大なデータフレームとしてまとめておく必要があります。
+
+おそらく、そっちのほうが「Rっぽい」書き方ではあるのですが、ここでつくりたいようなアニメーションのロジックをそういう書き方に移植するのはかなり手間なので、ここではgganimateは使わない方針でいきます。gganimateを使わなくても、[tweenr](https://github.com/thomasp85/tweenr)の関数を直接使えばイージングアニメーションをつくることは可能です。
+
+ここでは、25fpsで3秒（75フレーム）のアニメーションをつくることにしましょう。まず、軌跡は、点として出現したら出しっぱなしにするのではなく、経過時間に応じて短くなるようにします。そのために、経過時間に応じて`remove_count`を増加させ、`remove_count`の数だけ前から取り除いていきます。
+
+```{webr}
+#| label: trim-trail
+trim_trail <- \(tbl, frame, fps = 25, max_trail_count = 30) {
+  current_time <- frame / fps * 1000 # milliseconds
+  remove_count <-
+    tweenr::tween_at(1, nrow(tbl), frame / fps, ease = "cubic-in-out") |>
+    floor()
+  dplyr::filter(tbl, t < current_time) |>
+    dplyr::slice_tail(n = max_trail_count) |>
+    dplyr::slice_tail(n = -1 * remove_count)
+}
+
+trim_trail(dat, 10)
+```
+
+この`trim_trail()`の`frame`引数にフレーム番号を与えると、そのフレームにおける切り取られた軌跡が返されるので、それをforループか何かのなかでフレーム番号を増やしながら繰り返し呼び、各フレームの状態をggplot2でプロットしてから、一連のプロットをまとめてやればアニメーションになります。
+
+
+### パーティクルをつくる
+
+パーティクルの部分についても、軌跡の部分と同様の方針で実装します。つまり、各フレームで描画するパーティクルの位置や属性は、フレーム番号を受け取って、元データ`particles`からその都度計算します。
+
+```{webr}
+#| label: pop-particles
+translate_pos <- \(origin, trans_xy, rot_angle) {
+  affine_mat <-
+    matrix(c(
+      cos(rot_angle), sin(rot_angle), trans_xy[, 1],
+      -sin(rot_angle), cos(rot_angle), trans_xy[, 2],
+      0, 0, 1
+    ), ncol = 3)
+  origin %*%
+    matrix(c(1, 0, -origin[, 1], 0, 1, -origin[, 2], 0, 0, 1), ncol = 3) %*%
+    affine_mat %*%
+    matrix(c(1, 0, origin[, 1], 0, 1, origin[, 2], 0, 0, 1), ncol = 3)
+}
+
+gen_particles <- \(tbl, key) {
+  lifetime <- dplyr::pull(tbl, current_particles_count) - dplyr::pull(tbl, id)
+
+  origin <- dplyr::pull(tbl, position)
+  rot_angle <- dplyr::pull(tbl, angle)
+  trans_xy <- Reduce(\(acc, nxt) {
+    acc + dplyr::pull(tbl, velocity) * dplyr::pull(tbl, air_drag)^nxt
+  }, seq_len(max(1, floor(lifetime))), init = dplyr::pull(tbl, velocity))
+
+  dplyr::tibble(
+    t = dplyr::pull(key, t),
+    xy = translate_pos(origin, trans_xy, rot_angle),
+    opacity = 1 - lifetime / dplyr::pull(tbl, current_particles_count),
+    size = dplyr::pull(tbl, mass) * dist(trans_xy[1, ])[1],
+    color = dplyr::pull(tbl, color)
+  )
+}
+
+pop_particles <- \(tbl, frame, fps = 25, max_particle_count = 50) {
+  current_time <- frame / fps * 1000 # milliseconds
+  remove_count <-
+    tweenr::tween_at(1, nrow(tbl), frame / fps, ease = "cubic-in") |>
+    floor()
+  tbl |>
+    dplyr::filter(t < current_time) |>
+    dplyr::slice_tail(n = max_particle_count) |>
+    dplyr::mutate(id = dplyr::consecutive_id(t), current_particles_count = dplyr::n()) |>
+    dplyr::group_by(t) |>
+    dplyr::group_map(gen_particles) |>
+    dplyr::bind_rows() |>
+    dplyr::slice_tail(n = -1 * remove_count)
+}
+
+pop_particles(particles, 10)
+```
+
+`pop_particles()`は`particles`を`gen_particles()`に渡してその時点におけるパーティクルを生成し、生成されたパーティクルを`trim_trail()`と同様に経過時間に応じて切り詰めます。
+
+`gen_particles()`は、受け取ったパーティクルの元データから、その時点において現れているパーティクルの位置と属性を計算する関数です。基本的には、古いパーティクルほど遅くなるように`velocity`に`air_drag`をかけながらパーティクルの移動量を計算したうえで、元の位置`position`からアフィン変換しているだけのものです。
+
+:::{.callout-tip}
+## アフィン変換
+
+アフィン変換というのは、2次元空間における線形変換のうち、直線性と平行性を保つような変換のことです。図形を移動、回転、拡大・縮小、せん断する処理はこれで書くことができます。
+
+たとえば、次は$(x, y)$を原点を基準として$(\text{tx}, \text{ty})$だけ移動させつつ、角度$\theta$だけ回転させる変換です。
+
+$$
+\begin{bmatrix}
+x' \\
+y' \\
+1
+\end{bmatrix}
+=
+\begin{bmatrix}
+\cos\theta & -\sin\theta & \text{tx} \\
+\sin\theta & \cos\theta & \text{ty} \\
+0 & 0 & 1
+\end{bmatrix}
+\begin{bmatrix}
+x \\
+y \\
+1
+\end{bmatrix}
+$$
+:::
+
+なお、`Reduce()`に相当する処理は、ふつうは`purrr::reduce()`を使って書きます。ここではWebRでダウンロードされるパッケージの数を減らすために、あえて`Reduce()`を使っています。
+
+
+## アニメーションの確認
+
+準備はできたので、試しにフレームをプロットしてみましょう。プロットをおこなう関数はこんな感じにしておきます。
+
+```{webr}
+#| label: draw-trail
+draw_trail <- \(trail, particle, canvas) {
+  direction <- tail(trail, n = 1) - head(trail, n = 1)
+  gp <- canvas +
+    ggfx::with_motion_blur(
+      geom_point(
+        data = trail,
+        aes(x = x, y = y), color = "cyan", size = 6, alpha = 0.8
+      ),
+      sigma = 0.6,
+      angle = rasengan::rad2deg(atan2(direction$y, direction$x))
+    ) +
+    geom_point(
+      data = particle,
+      aes(x = xy[, 1], y = xy[, 2], alpha = opacity, color = color, size = size)
+    )
+  print(gp)
+}
+```
+
+とくに必須ということではないですが、軌跡の部分については、点がある程度つながっているように描かれてほしいので、`ggfx::with_motion_blur()`を使って、弱めのモーションブラーをかけています。
+
+次のコードブロックで、各フレームの状態をインタラクティブに確認することができます。
+
+---
+
+```{ojs}
+//| echo: false
+viewof n = Inputs.range([1, 75], {step: 1, label: "フレーム番号"})
+```
+
+```{webr}
+#| label: interactive-plot
+#| input:
+#|   - n
+frame <- seq(1, 25, length.out = 75)[n]
+trail <- trim_trail(dat, frame)
+particle <- pop_particles(particles, frame)
+
+draw_trail(trail, particle, canvas)
+```
+
+---
+
+こうして準備した`draw_trail()`を使って、次のようにして生成したGIFアニメーションが、先ほどから見ていた見本になります。なお、パーティクルなどに「光っている」ように見える効果を付けるために、ここでは次のRパッケージを利用して、生成した各フレームの画像に拡散フィルタをかけています。
+
+- [paithiov909/aznyan: Image filters for R, ported from https://github.com/5PB-3-4/AviUtl_OpenCV_Scripts](https://github.com/paithiov909/aznyan)
+
+```r
+fps <- 25
+canvas_size <- dev.size(units = "px")
+
+# フレームの書き出し
+ragg::agg_png("public/pictures/%04d.png", width = canvas_size[1], height = canvas_size[2], background = "transparent")
+
+purrr::iwalk(seq(1, fps, length.out = 75), \(frame, i) { # in frames
+  trail <- trim_trail(dat, frame)
+  particle <- pop_particles(particles, frame)
+  draw_trail(trail, particle, canvas)
+}, .progress = TRUE)
+
+dev.off()
+
+# GIFアニメーションの作成
+png_files <- fs::dir_ls("public/pictures/", glob = "*.png")
+dir <- tempdir()
+new_files <-
+  purrr::imap(unname(png_files), \(f, i) {
+    png <- readBin(f, what = "raw", n = file.info(f)$size) |>
+      aznyan::diffusion_filter(factor = 8)
+    path <- paste0(dir, "/", stringr::str_pad(i, 4, "left", "0"), ".png")
+    writeBin(png, con = path)
+    path
+  }, .progress = TRUE) |>
+  unlist(use.names = FALSE)
+
+gifski::gifski(new_files, "magical-trail.gif", delay = 1 / fps, progress = TRUE)
+```
+
+## むすび
+
+この記事では、Magical trail shaderを参考にしたロジックの実装例として、シアンの軌跡がパーティクルを伴って描かれるアニメーションをつくるためのRのコードを紹介しました。
+
+R言語は、おもに統計やデータ分析をおこなうのに便利なプログラミング言語であり、オブジェクト指向っぽいコードを書くのにはあまり適していません。そのため、何かのアプリケーションや、ゲームなどをつくるのには不向きなのですが、こういったクリエイティブコーディング的なことをするのには、意外と便利な側面もそなえています。
+
+たとえば、データフレームや行列といったデータ構造が標準機能として組み込まれている点や、基本的な計算がベクトライズされていることにくわえて、dplyrなどのパッケージが使えることで、そうしたデータ構造を使った計算処理を比較的シンプルに書ける点などは、こうしたコードを書くうえでなかなか魅力的だと思います。また、QuartoやRMarkdownのようなノートブック形式のファイルのなかで、手軽に実行してみることができるところも非常に便利なポイントです。
+
+一方で、実際にRで凝ったアニメーションをつくろうとすると、体験として不便な側面もあります。とくに、Rではアニメーションを試しに再生しながらリアルタイムに確認できる手段がないため、実際のコーディングでは、いくつかフレーム単位で書き出して見た目をチェックしてから、試しに短めのアニメーションをレンダリングしてみて、よさそうなら本番のレンダリングをするといった試行錯誤が必要になります。これは、こうした作品をつくるうえである程度は仕方がないことなのですが、「試しに再生してみる」ステップを繰り返すのに若干時間がかかるというのは、アニメーションをつくるうえではストレスになりやすいです。
+
+次の動画もRで書いたコードでつくられているアニメーションですが、これをつくる作業も、コーディングそのものがというよりは、待ち時間がいちいち長いところがストレスでした。
+
+{{< video https://www.youtube.com/watch?v=CSHlUZxwuQk >}}
+
+そのあたりはやはり向き不向きのあるところだろうと思うので、やりたいことの目的にあわせて、Rやほかの言語を賢く選択できればよいのかなと思います。
