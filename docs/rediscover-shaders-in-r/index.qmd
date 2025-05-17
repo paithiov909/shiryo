@@ -1,5 +1,5 @@
 ---
-title: "Rediscover Fragment Shaders In R, With skiagd"
+title: "Rediscover Fragment Shaders in R, with skiagd"
 author: "Akiru Kato (@paithiov909)"
 fig-width: 16
 fig-height: 9
@@ -36,7 +36,7 @@ knitr:
 - Interested in R and creative coding
 - Creating R packages:
   - [paithiov909/skiagd: A toy R wrapper for 'rust-skia'](https://github.com/paithiov909/skiagd)
-  - [paithiov909/aznyan: Image effects for R, ported from 5PB-3-4/AviUtl_OpenCV_Scripts](https://github.com/paithiov909/aznyan)
+  - [paithiov909/aznyan: Image filters for R, ported from https://github.com/5PB-3-4/AviUtl_OpenCV_Scripts](https://github.com/paithiov909/aznyan)
 :::
 
 :::
