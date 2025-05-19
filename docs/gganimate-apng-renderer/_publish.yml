@@ -1,0 +1,4 @@
+- source: index.qmd
+  quarto-pub:
+    - id: aca51d19-4c61-4b86-9d89-197f5d99c53d
+      url: https://paithiov909.quarto.pub/poc-apng_renderer-for-gganimate

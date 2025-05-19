@@ -1,0 +1,155 @@
+---
+title: "PoC: apng_renderer for gganimate"
+author: "paithiov909"
+date: "2025-05-19"
+format:
+  live-html:
+    embed-resources: false
+engine: knitr
+webr:
+  packages:
+    - apng
+    - gganimate
+    - ggplot2
+---
+
+{{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
+
+
+## What's this?
+
+This is a PoC for a new renderer for gganimate that uses `apng::apng()` to create [APNG](https://wiki.mozilla.org/APNG_Specification) files. You can find the qmd source of this page [here](https://github.com/paithiov909/shiryo/tree/main/docs/gganimate-apng-renderer).
+
+The [apng](https://CRAN.R-project.org/package=apng) package is written in pure R (using the bitops package) and is available on CRAN. The main motivation for using apng is that it can also be used in WebR. This means that, with the new `apng_renderer` implementation, gganimate can be made to work totally in browsers (currently, there should be no renderer provided by gganimate that can actually export animations even in WebR).
+
+
+## Limitations
+
+- `apng::apng()` is slow. It is much slower than the gifski renderer.
+- APNG files can be large and exporting them can take a long time.
+
+
+## Implementation details
+
+### Copied snippet
+
+Copied from [gganimate/R/import-standalone-types-check.R](https://github.com/thomasp85/gganimate/blob/41c30cf2419c7cda43a45a698a2b3eff7da8a217/R/import-standalone-types-check.R) and [gganimate/R/renderers.R](https://github.com/thomasp85/gganimate/blob/main/R/renderers.R).
+
+```{r}
+#| label: type-checks
+#| code-fold: true
+library(rlang)
+
+get_chunk_width <- function(options) {
+  options$out.width %||% paste0((options$fig.width / (options$fig.retina %||% 1)), 'px')
+}
+
+{{< include ./import-standalone-types-check.R >}}
+```
+
+### apng_renderer
+
+```{r}
+#| label: apng-renderer
+{{< include ./apng-renderer.R >}}
+```
+
+
+## Let's test!
+
+### In general R chunks
+
+The example code is borrowed from [Temperature time series · thomasp85/gganimate Wiki](https://github.com/thomasp85/gganimate/wiki/Temperature-time-series).
+
+```{r}
+#| label: apng-test
+#| fig-alt: APNG animation
+#| fig-width: 3.2
+#| fig-height: 2.4
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(gganimate)
+})
+
+airq <- airquality
+withr::with_locale(c(LC_TIME = "en_US.UTF-8"), {
+  airq$Month <- format(ISOdate(2004,1:12,1),"%B")[airq$Month]
+})
+
+p <- ggplot(airq, aes(Day, Temp, group = Month)) +
+  geom_line() +
+  geom_segment(aes(xend = 31, yend = Temp), linetype = 2, colour = 'grey') +
+  geom_point(size = 2) +
+  geom_text(aes(x = 31.1, label = Month), hjust = 0) +
+  transition_reveal(Day) +
+  coord_cartesian(clip = 'off') +
+  labs(title = 'Temperature in New York', y = 'Temperature (°F)') +
+  theme_minimal() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+
+timing <- Sys.time()
+
+# `apng::apng()` warns for some types of chunks since it doesn't handle them properly.
+suppressWarnings({
+  animate(p, renderer = apng_renderer(), nframes = 50, type = "cairo-png")
+})
+Sys.time() - timing
+```
+
+### In WebR chunks
+
+```{webr}
+#| label: setup-webr
+#| include: false
+library(rlang)
+
+get_chunk_width <- function(options) {
+  options$out.width %||% paste0((options$fig.width / (options$fig.retina %||% 1)), 'px')
+}
+
+{{< include ./import-standalone-types-check.R >}}
+{{< include ./apng-renderer.R >}}
+```
+
+Below is a code chunk of [r-wasm/quarto-live](https://github.com/r-wasm/quarto-live). It automatically runs the code in the cell once this page is loaded. I also added `timelimit: 180` (in seconds) to prevent the cell from timing out.
+
+```{webr}
+#| label: apng-webr
+#| autorun: true
+#| timelimit: 180
+#| fig-alt: APNG animation
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(gganimate)
+})
+
+airq <- airquality
+airq$Month <- format(ISOdate(2004,1:12,1),"%B")[airq$Month]
+
+p <- ggplot(airq, aes(Day, Temp, group = Month)) +
+  geom_line() +
+  geom_segment(aes(xend = 31, yend = Temp), linetype = 2, colour = 'grey') +
+  geom_point(size = 2) +
+  geom_text(aes(x = 31.1, label = Month), hjust = 0) +
+  transition_reveal(Day) +
+  coord_cartesian(clip = 'off') +
+  labs(title = 'Temperature in New York', y = 'Temperature (°F)') +
+  theme_minimal() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+timing <- Sys.time()
+
+suppressWarnings({
+  animate(p, renderer = apng_renderer(), nframes = 50, type = "cairo-png", width = 320, height = 240)
+})
+Sys.time() - timing
+```
+
+
+## References
+
+- [Renderers provided by gganimate — renderers • gganimate](https://gganimate.com/reference/renderers.html)
+- [gganimate/R/renderers.R at main · thomasp85/gganimate](https://github.com/thomasp85/gganimate/blob/main/R/renderers.R)
+- [Package 'apng' reference manual](https://cran.r-universe.dev/apng/doc/manual.html#apng)
+- [qstokkink/apng: APNG creation from multiple PNG files in R](https://github.com/qstokkink/apng)
