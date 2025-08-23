@@ -1,0 +1,4 @@
+- source: index.qmd
+  quarto-pub:
+    - id: 07f72541-805f-47b0-ae3b-a4f3a93e49a6
+      url: https://paithiov909.quarto.pub/beyond-the-heliosphere

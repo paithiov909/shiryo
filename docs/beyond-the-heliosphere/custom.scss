@@ -1,0 +1,35 @@
+/*-- scss:defaults --*/
+$font-family-sans-serif: -apple-system, "BlinkMacSystemFont", "Helvetica Neue", Helvetica, "Arial", "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+$body-bg: rgb(248 250 252);
+$body-color: rgb(55 65 81);
+$selection-bg: rgb(0, 78, 0);
+
+/*-- scss:rules --*/
+#title-slide {
+  word-boundary-detection: auto(ja);
+  word-break: auto-phrase;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+  width: 16rem;
+  height: 16rem;
+}
+
+/* https://zenn.dev/aldagram_tech/articles/7d7e6124e3a0fe#%E6%A8%AA%E6%96%B9%E5%90%91 */
+.carousel {
+  max-height: 70vh;
+  display: flex;
+  overflow-x: scroll;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+}
+
+.carousel-item {
+  width: 70vh;
+  scroll-snap-align: start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}

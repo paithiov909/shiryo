@@ -1,0 +1,369 @@
+---
+title: R言語からはじめるシェーダー芸入門
+author: "あきる（@paithiov909）"
+lang: ja
+fig-width: 8
+fig-height: 4.5
+lightbox: true
+format:
+  revealjs:
+    transition: fade
+    slide-number: "c/t"
+    navigation-mode: vertical
+    overview: true
+    chalkboard: false
+    progress: true
+    history: false
+    theme: [default, custom.scss]
+    include-in-header: header.html
+    embed-resources: false
+    link-external-newwindow: true
+knitr:
+  opts_chunk:
+    tidy: "styler"
+    collapse: true
+    comment: "#>"
+    dev: "ragg_png"
+---
+
+# 誰？
+
+:::{.columns}
+:::{.column width="30%"}
+![](https://rawcdn.githack.com/paithiov909/paithiov909/f5342cd61b45e29c34b17fc11c9bc1766eacb441/avatar.jpg){.rounded-full}
+:::
+
+:::{.column width="70%"}
+- あきる（[paithiov909](https://github.com/paithiov909)）というアカウントでインターネットしている
+- Rパッケージをつくったりしている
+  - [paithiov909/skiagd: A toy R wrapper for 'rust-skia'](https://github.com/paithiov909/skiagd)
+  - [paithiov909/aznyan: Image filters for R, ported from https://github.com/5PB-3-4/AviUtl_OpenCV_Scripts](https://github.com/paithiov909/aznyan)
+:::
+:::
+
+
+# 文化圏としてのtidyverse
+
+:::{.incremental}
+- tidyverseは、tidyverse的な考え方を活用することで、データサイエンスを便利にしていくことをめざしている
+:::
+
+## tidyverseがめざすもの (1/2)
+
+1. [**人間中心** :]{.fragment .semi-fade-out fragment-index=1} [Rでデータサイエンスしている人のことを考える]{.fragment .semi-fade-in fragment-index=1}
+2. [**一貫性のある設計** :]{.fragment .semi-fade-out fragment-index=2} [覚えるべきことを減らし、パッケージを組み合わせて利用しやすくする]{.fragment .semi-fade-in fragment-index=2}
+3. [**結合可能性** :]{.fragment .semi-fade-out fragment-index=3} [適度な大きさの関数の組み合わせによってタスクを解く]{.fragment .semi-fade-in fragment-index=3}
+4. [**包括性** :]{.fragment .semi-fade-out fragment-index=4} [コミュニティからサポートを受けられる]{.fragment .semi-fade-in fragment-index=4}
+
+## tidyverseがめざすもの (2/2)
+
+![画像は Hadley (2025) [A personal history of the tidyverse](https://hadley.github.io/25-tidyverse-history/) から抜粋](https://rawcdn.githack.com/hadley/25-tidyverse-history/4dad4c08087843217677b6153ad71590f5906bd6/the-tidyverse.png)
+
+
+# これがR言語のすべてなの？？
+
+:::{.incremental}
+- たぶん、違うと思う
+:::
+
+
+# この「宇宙」の外には何がある？
+
+## [Another World](https://github.com/coolbutuseless/anotherworld)のR言語への移植
+
+{{< video https://www.youtube.com/watch?v=LPotWAJnE_s start="720" width="100%" height="80%" >}}
+
+## [rayrender](https://github.com/tylermorganwall/rayrender)による3D表現
+
+{{< video https://www.youtube.com/watch?v=hRKx-obmFx8 start="760" width="100%" height="80%" >}}
+
+## ggplot2などによる[Rtistry](https://thomaslinpedersen.art/work/#category=R)
+
+[
+  ![koenderks/aRtsyのswirl](https://rawcdn.githack.com/koenderks/aRtsy/b99d902c28c9f9f603bb615729a13c44810a353b/png/swirls/2023-05-18.png){.carousel-item}
+  ![koenderks/aRtsyのflowfield](https://rawcdn.githack.com/koenderks/aRtsy/b99d902c28c9f9f603bb615729a13c44810a353b/png/flows/2021-09-22.png){.carousel-item}
+  ![koenderks/aRtsyのsegment](https://rawcdn.githack.com/koenderks/aRtsy/b99d902c28c9f9f603bb615729a13c44810a353b/png/segments/2021-08-07.png){.carousel-item}
+  ![koenderks/aRtsyのmaze](https://rawcdn.githack.com/koenderks/aRtsy/b99d902c28c9f9f603bb615729a13c44810a353b/png/mazes/2021-10-04.png){.carousel-item}
+]{.carousel}
+
+[いずれも [koenderks/aRtsy](https://github.com/koenderks/aRtsy) からの抜粋]{style="color: #777; font-size: 0.7em;"}
+
+## R言語≒データサイエンス
+
+:::{.incremental}
+- 「R言語は、統計解析やデータ可視化に特化したプログラミング言語」などと言われがち
+- tidyverseの文化圏は偉大だが、「R言語 ➡ tidyverse ➡ データサイエンス」のように考えてしまうと、この宇宙にははじめからそれしか存在していないみたいに見えてしまう
+- tidyverseがR言語の入り口として定番になったことで、学習は進めやすくなったものの、必ずしもデータサイエンス一色ではないR言語の側面が見えづらくなっているのでは？
+:::
+
+## 住み慣れた「宇宙」を飛び出そう
+
+だって私たちは、これから、どこにだって行けるはず！
+
+> As the tidyverse becomes more mature, the places where the tidyverse team spends our innovation energy have started to change. **Our mission is broad and we're willing to go wherever this takes us, even if it's into new areas that we know little about.**^[Hadley (2025) [A personal history of the tidyverse](https://hadley.github.io/25-tidyverse-history/) から。強調は引用者による]
+
+
+# R言語でもクリエイティブコーディングしてみよう!!
+
+## クリエイティブコーディング
+
+:::{.incremental}
+- プログラムを書くことによって、画像や映像、音楽などの創作物をつくる活動のこと
+- デジタルアートやメディアアートとか呼ばれるようなものをつくるためのライブラリやフレームワークがさまざまな言語で書かれている
+- [OpenProcessing](https://openprocessing.org/)とか[NEORT](https://neort.io/popular)で公開されている作品を眺めているだけでもたのしい
+:::
+
+## シェーダー芸
+
+:::{.incremental}
+- GLSLなどのシェーダー言語を使うことによっても、絵を描くことができる
+  - シェーダーは、本来は、3D表現においてオブジェクトに陰影などを描画するために使われるもの
+  - 一方で、オブジェクトとしては平面だけを用意し、そこにシェーダーをつかって色を乗せることでアートをつくれたりもする
+- きわめるとさまざまな表現が可能で、シェーダーを書くことによって複雑な表現をつくりこむことを、俗に「シェーダー芸」と呼んだりする
+:::
+
+
+# Rでもシェーダー芸はできる？
+
+:::{.incremental}
+- ふつうにはできないが、まったく不可能というわけでもない
+:::
+
+---
+
+### ふつうにはできない
+- R言語のグラフィック周りのAPIは限定的で、グラフ以外のものを描くのにはあまり向いていない
+- 当然ながら、GLSLのようなシェーダー言語を扱うこともできない
+
+### が、まったく不可能というわけでもない
+- 画像を適切なデータ形式で用意できれば、それを描画することはできる
+- フレームバッファを高速に用意できるのであれば、映像表現のようなこともたぶん可能
+
+---
+
+## Rでシェーダー芸をやるには
+
+- まずは、Rのグラフィックデバイスで直接描画できるような画像を出力することをめざす
+- それをシェーダー言語っぽいコードでできるようにしたら、それは実質的に「シェーダー芸」なのでは？？
+
+:::{.fragment .fade-up}
+### ここでのゴール🎯
+[Rcpp](https://www.rcpp.org/)を使って**シェーダー風のプログラム**を書くことによって、Rのグラフィックデバイスで表示できる画像を生成する
+:::
+
+
+# というわけで、そういうRパッケージをつくりました
+
+:::{.incremental}
+- [paithiov909/nativeshadr: Introduction of HLSL-like syntax to Rcpp for writing pixel shaders](https://github.com/paithiov909/nativeshadr)
+:::
+
+# 技術的なポイント
+
+:::{.incremental}
+- **HLSL++**を使って、**nativeRaster**を直に出力するRcppの関数を書けるようにする
+:::
+
+## nativeRaster (1/3)
+
+- 「Rのグラフィックデバイスで直接描画できるような画像」を表現するデータ形式
+  - ピクセルの色を表す`#00ddeeff`のようなRGBA値を32ビット符号なし整数に詰め込み、それらの配列によって1枚の画像を表現しているもの
+  - 内部的には符号なし整数だが、R言語には符号なし整数にあたる型が存在しないため、Rコンソール上ではinteger matrixとして扱われる
+  - 画像の高さ×幅に対応する次元をもつ
+
+## nativeRaster (2/3)
+
+```{r}
+#| label: nara1
+#| echo: true
+#| fig-alt: "navyだけで埋めたnativeRaster画像"
+## 色（カラーコード）に対応する整数表現への変換はcolorfastやfarverでできる
+colorfast::col_to_int(c("navy", "transparent", "#00ddeeff", "#fff"))
+
+## `-8388608L`は"navy"なので、この値で埋めると、全てのピクセルが"navy"になる
+rast <- rep_len(-8388608L, 360 * 640)
+dim(rast) <- c(360, 640) # height, width
+class(rast) <- "nativeRaster"
+
+grid::grid.newpage()
+grid::grid.raster(rast, interpolate = FALSE)
+```
+
+## nativeRaster (3/3)
+
+:::{.panel-tabset}
+### Rcppコード
+
+```{r}
+#| label: nara2
+#| echo: true
+## nativeRasterを返すRcppの関数は
+## nativeshadrを使うと、たとえば次のように書ける
+Rcpp::sourceCpp(code = R"{
+// [[Rcpp::depends(RcppParallel, nativeshadr)]]
+#include <nativeshadr.h>
+
+uint32_t gradient(int2 wh, RMatrix<int> nr, const vvd& uniforms) {
+  float2 uv = float2(wh) / float2(nr.ncol(), nr.nrow());
+  float4 col = float4(uv.x, uv.y, .6, 1);
+  return int4_to_icol(clamp(col * 255, 0, 255));
+}
+
+// [[Rcpp::export]]
+Rcpp::IntegerVector test_gradient(Rcpp::IntegerMatrix nr) {
+  const vvd uniforms;
+  return vectorize_shader(gradient)(nr, uniforms);
+}
+}")
+```
+
+### Rコード
+
+```{r}
+#| label: nara3
+#| echo: true
+#| fig-alt: "シェーダーで生成したグラデーション"
+library(nativeshadr)
+## `nr_new(width, height, fill)`は単色のnativeRasterを返すだけの関数
+img <- test_gradient(nr_new(640, 360, "white"))
+grid::grid.newpage()
+grid::grid.raster(img, interpolate = FALSE)
+```
+
+### 対応するGLSLコード
+
+[GLSLの書き方は環境によって異なるが、ここでは[glsl-canvas](https://marketplace.visualstudio.com/items?itemName=circledev.glsl-canvas)を想定している]{style="color: #888;"}
+
+```glsl
+precision mediump float;
+
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+uniform float u_time;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+  gl_FragColor = vec4(uv.x, uv.y, .6, 1);
+}
+```
+:::
+
+## HLSL++ (1/2)
+
+- シェーダー^[フラグメントシェーダーやピクセルシェーダーと呼ばれるものを念頭においています]というのは、ようするに、色を置く位置とその他のパラメータ（`uniform`）を受け取って、それらに応じて正規化されたRGBA値を返すような関数
+  - これを書きやすくするために`vec4`みたいなベクトル型の定義と、ベクトルの要素に便利にアクセスするための**swizzle**と呼ばれる記法をそなえている
+  - 定義されているメソッドやその名前などは方言によって異なるものの、その種類や、その他の文法はどれも同じような感じ
+
+## HLSL++ (2/2)
+
+- そのため、[HLSL++](https://github.com/redorav/hlslpp)のような、シェーダー言語のメソッドや文法を模倣できるようにするライブラリを持ち込むことで、C++のコードとして**シェーダー風のプログラム**を書くことができる
+- そうして書いた**シェーダー風のプログラム**を描きたいサイズのnativeRasterのすべてのピクセルについてvectorizeしてやれば、シェーダーの動作をRcppの関数としておおむね再現できる
+
+
+# Rによるシェーダー芸の実践例
+
+:::{.incremental}
+- お世辞にも「簡単」とはいえないが、表現としては実際にいろいろできるようになる
+:::
+
+## テクスチャを評価する例 (1/2)
+
+:::{.panel-tabset}
+
+### C++コード
+
+```cpp
+{{< include shader/retro.cpp >}}
+```
+
+### Rコード
+
+```r
+## nativeRasterのブレンドをするのに paithiov909/aznyan を使っている
+library(ggplot2)
+
+cap <- ragg::agg_capture(width = 480, height = 360)
+
+gp <-
+  ggplot(mtcars, aes(x = wt, y = mpg, colour = cyl)) +
+  geom_point(size = 8) +
+  theme_dark() +
+  scale_color_viridis_c(option = "viridis")
+print(gp)
+
+rast <- cap(native = TRUE)
+dev.off()
+
+Rcpp::sourceCpp("shader/retro.cpp")
+
+gifski::save_gif(
+  {
+    for (time in seq_len(200)) {
+      fd <- test_retro(rast, list(iTime = time))
+      grid::grid.newpage()
+      grid::grid.raster(aznyan::blend_hardlight(fd, rast), interpolate = FALSE)
+    }
+  },
+  gif_file = "anim-retro-ggplot.gif",
+  width = 480,
+  height = 360,
+  delay = 1 / 25,
+  progress = TRUE
+)
+```
+
+:::
+
+## テクスチャを評価する例 (2/2)
+
+{{< video video/anim-retro-ggplot.mp4 title="CRTっぽいエフェクトを合成したggplot2のグラフ" height="540" >}}
+
+## [GLSL Sandbox](https://glslsandbox.com/e#109628.0)からの移植 (1/2)
+
+:::{.panel-tabset}
+
+### C++コード
+
+```cpp
+{{< include shader/traverse.cpp >}}
+```
+
+### Rコード
+
+```r
+library(nativeshadr)
+
+Rcpp::sourceCpp("shader/traverse.cpp")
+
+gifski::save_gif(
+  {
+    for (time in seq(3 * pi, 8 * pi, by = .0314)) {
+      img <- test_traverse(nr_new(640, 360, "white"), list(iTime = time))
+      grid::grid.newpage()
+      grid::grid.raster(img, interpolate = FALSE)
+    }
+  },
+  gif_file = "anim-traverse.gif",
+  width = 640,
+  height = 360,
+  delay = 1 / 30,
+  progress = TRUE
+)
+```
+
+:::
+
+## [GLSL Sandbox](https://glslsandbox.com/e#109628.0)からの移植 (2/2)
+
+{{< video video/anim-traverse.mp4 title="「宇宙」を飛び出そう！" >}}
+
+
+# まとめ
+
+:::{.incremental}
+- Rcppで**シェーダー風のプログラム**を書くことによって、Rのグラフィックデバイスで直接描画できるような画像を出力すれば、Rでシェーダー芸ができる
+- これを実現するためにnativeshadrというRパッケージをつくった
+- R言語の世界はデータサイエンスだけじゃないかも！？ 住み慣れた「宇宙」を飛び出す勇気を持とう
+:::
+
+# Enjoy✨{.center}

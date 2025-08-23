@@ -47,7 +47,7 @@ _bookdown_files/
 *.sqlite3
 *wrd.parquet
 
-/node_modules/
-temp/
-
+.vscode
+node_modules
+temp
 /.luarc.json
