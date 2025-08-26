@@ -28,7 +28,7 @@ knitr:
 
 # 誰？
 
-:::{.collumns}
+:::{.columns}
 
 :::{.column width="30%"}
 ![](https://rawcdn.githack.com/paithiov909/paithiov909/f5342cd61b45e29c34b17fc11c9bc1766eacb441/avatar.jpg){.rounded-full}
