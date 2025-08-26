@@ -316,7 +316,48 @@ gifski::save_gif(
 
 ## テクスチャを評価する例 (2/2)
 
-{{< video video/anim-retro-ggplot.mp4 title="CRTっぽいエフェクトを合成したggplot2のグラフ" height="540" >}}
+{{< video video/anim-retro-ggplot.mp4 title="レトロなエフェクトを合成したggplot2のグラフ" height="540" >}}
+
+## [ggfx](https://ggfx.data-imaginist.com/articles/custom_filters.html)と組み合わせた例
+
+:::{.panel-tabset}
+
+### C++コード
+
+```cpp
+{{< include shader/ripple.cpp >}}
+```
+### Rコード
+
+```{r}
+#| label: ggfx-ripple
+#| echo: true
+#| fig-alt: "ggfxでレイヤーにエフェクトをかけたグラフ"
+#| output-location: slide
+library(ggplot2)
+library(ggfx)
+
+Rcpp::sourceCpp("shader/ripple.cpp")
+
+ripple <- \(x, freq = 64.0, amp = .01, offset = c(0, 0)) {
+  vp <- get_viewport_area(x)
+  vp <- test_ripple(vp, list(freq = freq, amp = amp, offset = offset))
+  set_viewport_area(x, vp)
+}
+
+ggplot(mtcars, aes(x = factor(gear), y = disp)) +
+  with_custom(
+    geom_boxplot(aes(fill = as.factor(gear))),
+    filter = ripple
+  ) +
+  labs(title = "ggfxでレイヤーにエフェクトをかけたグラフ")
+```
+
+:::
+
+## レイマーチング（[Surf Space](https://www.shadertoy.com/view/wflcRS)）
+
+{{< video video/anim-shadertoy-wflcRS.mp4 title="レイマーチング（Surf Space）" height="540" >}}
 
 ## [GLSL Sandbox](https://glslsandbox.com/e#109628.0)からの移植 (1/2)
 
