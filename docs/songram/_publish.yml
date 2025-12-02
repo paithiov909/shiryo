@@ -1,0 +1,4 @@
+- source: index.qmd
+  quarto-pub:
+    - id: a7dd281a-49f1-4e52-bdaa-e3afd7206973
+      url: https://paithiov909.quarto.pub/songram

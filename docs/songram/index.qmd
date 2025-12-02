@@ -1,0 +1,254 @@
+---
+title: "そんぐらむ"
+subtitle: |
+  A simple sonifier for micropoetry, transforming short Japanese texts into abstract MIDI soundscapes.
+author: "Akiru Kato (paithiov909)"
+date: "2025-12-02"
+engine: knitr
+format:
+  live-html:
+    link-external-icon: true
+    link-external-newwindow: true
+    include-in-header: header.html
+    smooth-scroll: true
+    other-links:
+      - name: GitHub
+        text: GitHub Repo
+        href: https://github.com/paithiov909/shiryo
+    mainfont: |
+      -apple-system, "BlinkMacSystemFont", "Helvetica Neue", Helvetica, "Arial", "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"
+webr:
+  packages:
+    - pipopaplot
+    - base64enc
+    - stringi
+    - htmltools
+  repos:
+    - https://paithiov909.r-universe.dev
+resources:
+  - data
+---
+
+{{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
+
+## これは何？
+
+- 日本語の短い文字列をもとに可聴化することによってMIDIファイルを生成できるページです
+- このページで生成したMIDIファイルは自由に使ってもらってかまいません
+- 入力したテキストは外部に送信されることはありません
+- スマホではなくPCから使ってみることをおすすめします
+
+```{=html}
+<details>
+```
+
+### どういうしくみなの？
+
+ブログ記事で解説する予定です。まだ書いていません。
+
+### エンコードのしくみ
+
+テキストは次のように読み込んだデータを使ってエンコードしたうえで、`embeddings`をもとに各トークンに対応するMIDIノートへとマッピングされます。
+
+```{webr}
+#| label: setup
+#| autorun: true
+#| edit: false
+embeddings <- read.csv("data/tanka-midi-embeddings.csv")
+
+vocab <- read.csv("data/tanka-midi-vocab.csv")
+vocab <- vocab[order(-nchar(vocab$subword)), ]
+
+bpe_encode_greedy <- function(text, vocab, unk_id = 1) {
+  # vocab は data.frame(subword, id)
+  # id は整数
+  # text は単一の文字列
+
+  output_ids <- integer(0)
+  pos <- 1
+  n <- nchar(text, type = "bytes")  # 念のため bytes
+
+  # subwords を長い順に処理
+  subs <- vocab$subword
+  ids  <- vocab$id
+
+  while (pos <= n) {
+    matched <- FALSE
+
+    # pos から substring を切っていく
+    for (i in seq_along(subs)) {
+      sw <- subs[i]
+      len <- nchar(sw, type = "bytes")
+
+      if (len == 0) next
+
+      if (pos + len - 1 <= n) {
+        # substring を比較
+        chunk <- substr(text, pos, pos + len - 1)
+        if (chunk == sw) {
+          # マッチしたら token id を出力
+          output_ids <- c(output_ids, ids[i])
+          pos <- pos + len
+          matched <- TRUE
+          break
+        }
+      }
+    }
+
+    # どれにもマッチしなかったら UNK を1文字進めて出す
+    if (!matched) {
+      output_ids <- c(output_ids, unk_id)
+      pos <- pos + 1
+    }
+  }
+
+  output_ids
+}
+
+safe_bpe <- function(txt, vocab) {
+  tryCatch(
+    bpe_encode_greedy(txt, vocab),
+    error = function(e) integer(0)
+  )
+}
+```
+
+### ライセンス
+
+このページのソースコードには"THE BEER-WARE LICENSE"を適用することにします。自由に使ってもらってかまいませんが、いつかビールをおごってもらえると喜びます🍺
+
+```cpp
+/*
+ * ----------------------------------------------------------------------------
+ * "THE BEER-WARE LICENSE" (Revision 42):
+ * Akiru Kato (paithiov909) wrote this file. As long as you retain this notice you
+ * can do whatever you want with this stuff. If we meet some day, and you think
+ * this stuff is worth it, you can buy me a beer in return paithiov909.
+ * ----------------------------------------------------------------------------
+ */
+```
+
+```{=html}
+</details>
+```
+
+## やってみよう
+
+### 1.短文を入力する
+
+可聴化したい短文を入力してください。
+
+改行すると、15文までまとめて可聴化できます。それぞれの短文は**単語っぽい切れ目ごとに半角スペースで区切りながら**、漢字などの**読みを「ひらがな・カタカナ」に開いて**入力してください（厳密にこの入力ルールを守らなくても動くはずですが、意図しない結果になる可能性があります）。
+
+#### 入力例
+
+```
+なつ ひかる ふゆ ひからない でも なんか きょう は ほのかに ふゆ とろぴかる
+ソウメン ヨ ソコデ ブクブク サレ ツツ モ ミヨ ヤ アタイ ノ アヤシイ オドリ
+hello カップヌードル の えびたち そして グッバイ だ そして しずかに ひきがね を ひく
+```
+
+```{ojs}
+//| echo: false
+viewof textbox = Inputs.textarea({
+  label: "可聴化したい文（15行まで）",
+  value: "なつ ひかる ふゆ ひからない でも なんか きょう は ほのかに ふゆ とろぴかる\nソウメン ヨ ソコデ ブクブク サレ ツツ モ ミヨ ヤ アタイ ノ アヤシイ オドリ\nhello カップヌードル の えびたち そして グッバイ だ そして しずかに ひきがね を ひく",
+  placeholder: "ここに音響化したい文を入力してください",
+  rows: 15,
+  maxlength: 2048
+})
+```
+
+### 2.データを変換する
+
+テキストボックスに入力した短文から、MIDIファイルになるデータが生成されます（このコードブロックはテキストエリアが変更されるたびに自動的に実行されます）。
+
+R言語に慣れている人は、コードブロックの内容を編集してみましょう。可聴化のされ方を自由に変更することができます！
+
+```{webr}
+#| label: app
+#| input:
+#|   - textbox
+toks <-
+  dplyr::tibble(text = stringi::stri_split_lines1(textbox) |> head(15)) |>
+  dplyr::mutate(
+    doc_id = dplyr::row_number() |> factor(),
+    text = stringi::stri_trans_nfkc(text) |>
+      stringi::stri_trim_both() |>
+      stringi::stri_trans_general("Any-Latin"),
+    text = lapply(text, safe_bpe, vocab = vocab)
+  ) |>
+  dplyr::reframe(
+    text = unlist(text, use.names = FALSE),
+    .by = doc_id
+  )
+
+if (nrow(toks) == 0) {
+  stop("入力されたテキストからは音データを生成できません")
+} else {
+  midi_dat_base <- toks |>
+    dplyr::left_join(embeddings, by = "text") |>
+    dplyr::mutate(pca = as.matrix(dplyr::pick(starts_with("pca"))), .keep = "unused") |>
+    dplyr::reframe(
+      channel = doc_id,
+      group = channel,
+      x = dplyr::row_number(),
+      y = rowMeans(pca[, 1:3]),
+      duration = sqrt(rowSums(dplyr::lag(pca[, 1:3], default = matrix(c(0, 0, 0), ncol = 3)) - pca[, 1:3])^2),
+      velocity = sqrt(rowSums(pca[, 1:3]^2)),
+      pca4 = pca[, 4],
+      pca5 = pca[, 5],
+      pca6 = pca[, 6],
+      .by = doc_id
+    )
+
+  midi_dat_dup <- midi_dat_base |>
+    dplyr::reframe(
+      doc_id = unique(doc_id),
+      channel = unique(channel),
+      group = unique(group),
+      x = x + scales::rescale(pca4, to = c(0, 1)),
+      y = y + pca5 * pi,
+      duration = duration * scales::rescale(pca6, to = c(0, 1)),
+      velocity = velocity * pi * .1,
+      .by = channel
+    )
+
+  midi <- dplyr::bind_rows(midi_dat_base, midi_dat_dup) |>
+    dplyr::arrange(doc_id, desc(channel), group) |>
+    pipopaplot::sonify(
+      pitch_range = c(48, 84),
+      vel_range = c(40, 100),
+      duration_range = c(8, 4),
+      phrase_len = 8,
+      offset = .075
+    )
+
+  str(midi)
+}
+```
+
+### 3.MIDIを生成する
+
+データ変換ができたら、このコードブロックの「Run Code」ボタンを押すことで、ダウンロードリンクを出せます。手もとにダウンロードしたうえで、好みのソフトウェアでMIDIファイルを再生・編集することができます。
+
+音色（プログラム番号）は、デフォルトではランダムに割り当てられます。お使いの環境でよく聞こえない音色を引いてしまった場合、何度か生成しなおしてみるとよいかもしれません。
+
+```{webr}
+if (nrow(midi) != 0) {
+  midi_file <-
+    pipopaplot::write_midi(
+      midi,
+      tempfile(fileext = ".mid"),
+      # ここの`programs`から、それぞれのchannelに対応するプログラム番号を割り当てることができます
+      opt = list(programs = sample.int(128, nlevels(midi$channel)) - 1L)
+    )
+
+  htmltools::tags$div(
+    htmltools::tags$a("ダウンロード",
+      href = base64enc::dataURI(file = midi_file, mime = "audio/midi"),
+      download = basename(midi_file)
+    )
+  )
+}
+```
