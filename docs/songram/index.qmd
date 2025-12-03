@@ -3,7 +3,7 @@ title: "そんぐらむ"
 subtitle: |
   A simple sonifier for micropoetry, transforming short Japanese texts into abstract MIDI soundscapes.
 author: "Akiru Kato (paithiov909)"
-date: "2025-12-02"
+date: "2025-12-03"
 engine: knitr
 format:
   live-html:
@@ -69,7 +69,7 @@ bpe_encode_greedy <- function(text, vocab, unk_id = 1) {
   n <- nchar(text, type = "bytes")  # 念のため bytes
 
   # subwords を長い順に処理
-  subs <- vocab$subword
+  subs <- stringi::stri_replace_all_fixed(vocab$subword, "▁", " ")
   ids  <- vocab$id
 
   while (pos <= n) {
@@ -85,7 +85,7 @@ bpe_encode_greedy <- function(text, vocab, unk_id = 1) {
       if (pos + len - 1 <= n) {
         # substring を比較
         chunk <- substr(text, pos, pos + len - 1)
-        if (chunk == sw) {
+        if (grepl(chunk, sw, fixed = TRUE)) {
           # マッチしたら token id を出力
           output_ids <- c(output_ids, ids[i])
           pos <- pos + len
