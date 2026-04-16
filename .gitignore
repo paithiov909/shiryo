@@ -38,6 +38,7 @@ _bookdown_files/
 
 # R Environment Variables
 .Renviron
+.env
 
 # Model files
 *.bin

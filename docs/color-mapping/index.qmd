@@ -1,0 +1,194 @@
+---
+title: 間違った線形回帰の使い方
+subtitle: Underfitted Color Mapping via Linear Regression
+author: "あきる（@paithiov909）"
+lang: ja
+fig-width: 8
+fig-height: 4.5
+lightbox: true
+format:
+  revealjs:
+    transition: fade
+    slide-number: "c/t"
+    navigation-mode: vertical
+    overview: true
+    chalkboard: false
+    progress: true
+    history: false
+    theme: [default, custom.scss]
+    include-in-header: header.html
+    embed-resources: false
+    link-external-newwindow: true
+knitr:
+  opts_chunk:
+    tidy: "styler"
+    collapse: true
+    comment: "#>"
+    dev: "jpeg"
+---
+
+#
+
+:::{.r-fit-text}
+Q. 線形回帰は好きですか？
+:::
+
+## 線形回帰
+
+:::{style="color: #777;"}
+- 値の組を突っ込むと別の値がいい感じに出てくるような線形結合の表現を求めるやつ
+- 観測可能な値の組から未知の別の値のほうを予測したりするのに使う
+- 詳しいことは各自勉強してください
+:::
+
+### しかし、線形回帰には致命的な弱点が😨{.fragment .fade-up}
+
+#
+
+:::{.fukidashi-01-08}
+[ふつうに生活してて、線形回帰に突っ込みたくなるようなデータとの出会いなんかないですよ……]{.center}
+:::
+
+# そんな線形回帰を救いたい
+
+## 線形回帰をもっと身近に
+
+:::{.r-stack style="height: 70%;"}
+![](figures/nobita.jpg){.fragment}
+
+![](figures/fukidashi.png){.fragment}
+
+![](figures/colorfilter-image.jpg){.fragment}
+:::
+
+## 画像ってただの値の組ｼﾞｬﾅｲﾃﾞｽｶｰ
+
+```{r}
+#| label: raster-matrix
+#| echo: true
+rast <- jpeg::readJPEG("figures/colorfilter-image.jpg")
+# これは768(縦)x1024(横)x3(RGBチャンネル)の3次元配列
+str(rast * 255)
+
+nr <- jpeg::readJPEG("figures/colorfilter-image.jpg", native = TRUE)
+# これは各RGBA値を32ビット符号なし整数に詰めた行列
+str(nr)
+```
+
+## それ表形式でよくね？
+
+```{r}
+#| label: decode
+#| echo: true
+#' Decode nativeRaster into a tibble
+#' @param nr A nativeRaster object.
+#' @param to Passed to `to` argument of [farver::decode_colour()].
+#' @returns A tibble.
+decode_icol <- function(nr, to = "rgb") {
+  if (!inherits(nr, "nativeRaster")) {
+    cli::cli_abort("Input must be a nativeRaster object")
+  }
+  rgb <-
+    farver::decode_native(nr) |>
+    farver::decode_colour(alpha = FALSE, to = to)
+
+  dplyr::tibble(
+    icol = as.integer(nr),
+    r = rgb[, 1],
+    g = rgb[, 2],
+    b = rgb[, 3],
+    a = if (to == "cmyk") rgb[, 4] else 1
+  )
+}
+
+# こうする
+(dat <- decode_icol(nr, to = "rgb"))
+```
+
+## テーブルデータはこうして…
+
+```{r}
+#| label: predict-color
+#| echo: true
+suppressPackageStartupMessages({
+  library(tidymodels)
+})
+
+color_split <- initial_split(dat, prop = 0.1, strata = icol)
+color_train <- training(color_split)
+
+color_rec <-
+  recipe(icol ~ r + g + b, data = color_train) |>
+  # そのまま回帰すると完全に予測できてしまうので、非線形な変換をかける
+  step_cut(all_numeric_predictors(), breaks = 100)
+
+color_spec_lm <-
+  linear_reg() |>
+  set_engine("lm")
+
+color_wf <-
+  workflow() |>
+  add_recipe(color_rec) |>
+  add_model(color_spec_lm) |>
+  fit(color_train)
+
+pred <-
+  augment(
+    extract_fit_parsnip(color_wf),
+    new_data = prep(color_rec) |> bake(new_data = dat)
+  ) |>
+  dplyr::select(.pred, icol)
+
+# metricsの確認。そこそこ外れているほうがおもしろい
+pred |>
+  metrics(truth = icol, estimate = .pred)
+```
+
+## こうすれば回帰できますやん
+
+```{r}
+#| label: predict-image
+#| echo: true
+#| output-location: column
+as.nativeRaster <- function(x, size, ...) {
+  UseMethod("as.nativeRaster")
+}
+
+as.nativeRaster.numeric <- function(x, size, ...) {
+  if (length(size) != 2 || length(x) != prod(size)) {
+    cli::cli_abort("Input must be of length {prod(size)}")
+  }
+  x <- structure(as.integer(x), class = "nativeRaster")
+  dim(x) <- size
+  x
+}
+# 予測値を画像にもどす
+predicted_img <- as.nativeRaster(pred$.pred, dim(nr))
+
+grid::grid.newpage()
+grid::grid.raster(predicted_img, interpolate = FALSE)
+```
+
+# ということは…
+
+## たとえばこんな動画について
+
+{{< video https://youtu.be/_Au-Twe5Zko width="100%" height="100%" >}}
+
+## さっきの画像から予測すると
+
+```r
+{{< include ./convert-video.R >}}
+```
+
+## こんな感じにできたりする
+
+{{< video https://youtu.be/1EMO6Yuy5mA width="100%" height="100%" >}}
+
+# まとめ
+
+- 画像はテーブルデータと見なせば回帰分析に突っ込める
+- わざとunderfitさせた回帰モデルを使って別の画像の色を予測することによって、画像の色を変換できるぞ！
+- カラーフィルターに転用することによって救われる線形回帰があるかもしれない
+
+# Enjoy🙏{.center}
