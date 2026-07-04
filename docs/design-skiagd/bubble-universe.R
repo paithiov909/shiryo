@@ -27,6 +27,7 @@ imgs <- purrr::imap_chr(seq(0, 4 * pi, by = 0.02), \(t, idx) {
         ys[j] <- y
       }
       data.frame(
+        j = .x$j,
         x = xs,
         y = ys,
         z = 1,

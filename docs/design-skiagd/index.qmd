@@ -39,6 +39,9 @@ knitr:
 :::{.column width="70%"}
 - あきる（[paithiov909](https://github.com/paithiov909)）というアカウントでインターネットしている
 - 趣味でRパッケージをつくったりしている
+  - [skiagd](https://github.com/paithiov909/skiagd)
+  - [rasengan](https://github.com/paithiov909/rasengan)
+  - [aznyan](https://github.com/paithiov909/aznyan) / [nativeshadr](https://github.com/paithiov909/nativeshadr)
 :::
 :::
 
@@ -59,7 +62,7 @@ knitr:
 #
 
 :::{.fukidashi-01-08}
-[A. 統計やデータ分析に興味があるのは一部のオタクだけだからです🤬]{.center}
+[A. 統計やデータ分析なんてAIにでもやらせておけばOKだからです🤬]{.center}
 :::
 
 # R言語はオワコンなのか
@@ -68,7 +71,7 @@ knitr:
 
 :::{.incremental}
 - tidyverseのエコシステムの成熟
-- 新しいIDEやAIコーディングの普及（[Positron](https://positron.posit.co/), [btw](https://posit-dev.github.io/btw/), etc.）
+- 新しいツールやAIコーディングの普及（[Positron](https://positron.posit.co/), [arf](https://github.com/eitsupi/arf), [btw](https://posit-dev.github.io/btw/), etc.）
 - Positの人たちが構想している[R in Production](https://r-in-production.org/introduction.html)という路線
 :::
 
@@ -79,7 +82,7 @@ knitr:
 :::{.incremental}
 1. Rユーザーの興味は***自分の役に立つかどうか***に偏りがち
 2. ***データ分析には役に立たなそうな話***はコミュニティ内で広くは紹介されない
-3. そういう***ふつうの使い方***はAIが代行してくれる
+3. 一般的な***コードを書く作業***はAIが代行してくれる
 :::
 
 :::{.r-stack}
@@ -100,99 +103,46 @@ knitr:
 
 [画像：阿部共実『死にたくなるしょうもない日々が死にたくなるくらいしょうもなくて死ぬほど死にたくない日々（１）』から]{style="color: #777; font-size: 0.4em;"}
 
-## 自分なりのRの使い方を見つけよう
+## 使い方はハウツーのことじゃない
 
 :::{style="color: #777;"}
-- 「役に立つかどうか」だけでRを見ていると、あえてRの使用を検討する機会は縮小していく
-- でも、その結果としてRがオワコンに見えているのだとしたら、視野が狭くなっているだけなのかもしれない
-- Rの可能性を自分たちで狭めないことが、コミュニティを活気づけることにもつながるはず
+- AIにコードを書かせるだけなら、あえてRを書きたい場面は減っていく
+- それでも人間がコードを書かざるをえないような場面においては、人間のためのコーディング体験が問われる
+- 人間にとっての体験の良し悪しはAIに訊いてもわからない
 :::
 
-### 🔍新しいRの使い方を探しに行こう!!{.fragment .fade-up}
+### ❤️‍🔥Rでできることじゃなく体験の話をしろ!!{.fragment .fade-up}
 
 # R言語によるアートづくり
 
-## Rでのアート制作文化（Rtistry）
+## 作品例 (1/3)
 
 [
-  ![koenderks/aRtsyのswirl](https://rawcdn.githack.com/koenderks/aRtsy/b99d902c28c9f9f603bb615729a13c44810a353b/png/swirls/2023-05-18.png){.carousel-item}
-  ![koenderks/aRtsyのflowfield](https://rawcdn.githack.com/koenderks/aRtsy/b99d902c28c9f9f603bb615729a13c44810a353b/png/flows/2021-09-22.png){.carousel-item}
-  ![koenderks/aRtsyのsegment](https://rawcdn.githack.com/koenderks/aRtsy/b99d902c28c9f9f603bb615729a13c44810a353b/png/segments/2021-08-07.png){.carousel-item}
-  ![koenderks/aRtsyのmaze](https://rawcdn.githack.com/koenderks/aRtsy/b99d902c28c9f9f603bb615729a13c44810a353b/png/mazes/2021-10-04.png){.carousel-item}
+  ![](figures/260529_sm.jpg){.carousel-item}
+  ![](figures/some-glitchart3_sm.jpg){.carousel-item}
+  ![](figures/colormap16-pinlight_sm.jpg){.carousel-item}
+  ![](figures/marble02_sm.jpg){.carousel-item}
 ]{.carousel}
 
-[いずれも [koenderks/aRtsy](https://github.com/koenderks/aRtsy) からの抜粋]{style="color: #777; font-size: 0.7em;"}
+[過去の自作から抜粋]{style="color: #777; font-size: 0.7em;"}
 
-## Rでアニメーションをつくる
+## 作品例 (2/3)
 
-:::{.incremental}
-- 従来のggplot2によるRtistryは静止画のジェネラティブアートが主流
-- でも私はどちらかというとプロシージャルなアニメーションがつくりたかった
-- Rで映像素材をつくるためのパイプラインを開発してみることに
-  - [skiagd](https://github.com/paithiov909/skiagd)
-  - [rasengan](https://github.com/paithiov909/rasengan)
-  - [aznyan](https://github.com/paithiov909/aznyan) / [nativeshadr](https://github.com/paithiov909/nativeshadr)
-:::
+{{< video https://youtu.be/Fy0z_5QK7a0 width="100%" height="90%" >}}
 
-## 実際のRコードの例
+## 作品例 (3/3)
 
-```r
-library(skiagd)
-
-cv_size <- dev_size()
-
-n_frames <- 720
-n_circles <- 50
-radius <- runif(n_circles, min = .25, max = 2) |> sort()
-trans <- matrix(c(60, 0, cv_size[1] / 2, 0, 60, cv_size[2] / 2, 0, 0, 1), ncol = 3)
-
-circle <- \(amp, freq, phase) {
-  amp * 1i^(freq * seq(0, 600, length.out = n_circles) + phase)
-}
-
-dir <- tempdir()
-imgs <- purrr::imap_chr(seq(0, 4 * pi, length.out = n_frames + 1)[-1], \(a, i) {
-  # Compute a stack of circles with changing amplitudes and phases
-  l <- sin(pi * (2 * a - .5)) + 1
-  z <- circle(pi / 6, -pi, 0) +
-    circle(l, ceiling(a), -9 * cos(a) + 1) +
-    circle(l / 2 - 1, ceiling((-a + (7 / 2)) %% 7) - 7, -7 * cos(a) + 1)
-
-  hue <- (a + (Re(z / pi))) %% 1
-  colours <- grDevices::hsv(hue, .66, .75, alpha = 1)
-
-  # Build one frame
-  png <- canvas("#04010F") |>
-    add_circle(
-      cbind(Re(z), Im(z), 1) %*% trans,
-      radius = log(max(cv_size), exp(.5)) * radius,
-      color = col2rgba(colours),
-      props = paint(
-        style = Style$Fill,
-        blend_mode = BlendMode$Plus,
-      )
-    ) |>
-    as_png()
-
-  fp <- file.path(dir, sprintf("%04d.png", i))
-  writeBin(png, fp)
-  fp
-})
-```
-
-## 実際のアニメーションの例
-
-{{< video https://youtu.be/Fy0z_5QK7a0 width="100%" height="100%" >}}
+{{< video https://youtu.be/KGHglgcHKeM width="100%" height="90%" >}}
 
 ## なぜR言語なのか
 
 :::{.incremental}
 - クリエイティブコーディング向けのフレームワークやライブラリは他言語実装がたくさんある
-- 他言語で便利にできることをそのままRでできるようにしてもそれほど嬉しくない
+- 他言語で便利にできることをそのままRでできるようにしてもべつに嬉しくない
 - むしろ重要なのは***Rらしい書き方ができる***こと
 :::
 
-### 🎯ただ「R言語でやってみる」のではなく、Rらしい体験をデザインするべき{.fragment .fade-up}
+### 🎯「R言語でやってみた」よりも「Rらしい体験である」ことが重要{.fragment .fade-up}
 
 #
 
@@ -241,7 +191,7 @@ imgs <- purrr::imap_chr(seq(0, 4 * pi, length.out = n_frames + 1)[-1], \(a, i) {
 const W = 540;
 const N = 60;  // 元の作品では200だが、ここではひかえめにしている
 let x, y, t;
-let running = true;
+let running = false;
 
 // セットアップ
 function setup() {
@@ -253,6 +203,7 @@ function setup() {
   noStroke();     // ストロークをなしに
   blendMode(ADD); // ブレンドモードを加算に
   frameRate(3);   // 軽くするためにフレームレートを適当に下げる
+  background(0);
 }
 
 // ループのなかで呼ばれる関数
@@ -299,27 +250,26 @@ function keyPressed() {
 
 ## skiagdで描画した例
 
-{{< video https://youtu.be/INeuFuR3RGQ width="100%" height="100%" >}}
+{{< video https://youtu.be/INeuFuR3RGQ width="100%" height="90%" >}}
 
 ## skiagdコードの特徴 (1/2)
 
 - データ駆動・宣言的な描画処理
   - [一つ一つの図形を描く処理を繰り返すのではなく、何をどこに描くかを表現するデータをあらかじめ用意しておいて一度に描画する]{style="color: #777;"}
 - 純粋関数とパイプを使った書き方
-  - [描画処理は時間$t$を受け取って対応するフレームを返す純粋関数と見なせる（外にある変数を書き換える副作用をもたない）]{style="color: #777;"}
+  - [描画処理は時間$t$を受け取って対応するフレームを返す純粋関数と見なせる]{style="color: #777;"}
   - [描画結果も副作用ではなく値として返されるので、それらをパイプでつなぎながら処理を書く]{style="color: #777;"}
 
 ## skiagdコードの特徴 (2/2)
 
 - 対話的環境で素早く試行錯誤できる
-  - [元データも描画結果も値なので、制作途中で部分実行して中身を確認することができる]{style="color: #777;"}
+  - [元データも描画結果も値として持っているため、制作途中で部分実行して中身を確認することができる]{style="color: #777;"}
   - [パイプラインの一部を変更して試しに実行してみるコストがとても低い]{style="color: #777;"}
 - 「Rらしさ」ゆえに書きにくい表現もある
   - [データが可変長、参照関係や履歴を保持するような状態遷移を含む場合、tidyverse的な表現では力不足]{style="color: #777;"}
-  - [リアルタイムに近い描画ができるほど速くはない]{style="color: #777;"}
   - [命令的なインタラクションをもたない]{style="color: #777;"}
 
-## たとえばこんな感じ
+## 試行錯誤のようす (1/4)
 
 ```{r}
 #| label: fig1-bubble-universe
@@ -333,8 +283,15 @@ W <- 540L
 N <- 280L
 tau <- 2 * pi
 
+# いきなり全フレームを生成する
+# ループを組み立てるのではなく、
+# 1フレームだけ生成して確認する作業を
+# 繰り返しながらデザインを決めていく
+
+# そのために`t`を適当に固定する
 t <- 1.234
 
+# 中身を確認しながら元データをつくる
 x <- y <- 0
 r <- tau / N
 dat <-
@@ -351,6 +308,7 @@ dat <-
       ys[j] <- y
     }
     data.frame(
+      j = .x$j,
       x = xs,
       y = ys,
       z = 1,
@@ -360,6 +318,51 @@ dat <-
   dplyr::ungroup()
 
 dat
+
+# 宇宙っぽく輝いている雰囲気にしたいので
+# 後段でエフェクトをかけてみる
+rast <-
+  canvas("black") |>
+  add_point(
+    dat |>
+      dplyr::select(x, y, z) |>
+      as.matrix() %*%
+      affiner::transform2d() %*%
+      affiner::scale2d(N / 2) %*%
+      affiner::translate2d(W / 2, W / 2),
+    group = seq_len(nrow(dat)),
+    color = dplyr::pull(dat, col) |>
+      col2rgba(),
+    props = paint(
+      width = 2,
+      blend_mode = BlendMode$Plus,
+    )
+  ) |>
+  as_nativeraster() |>
+  aznyan::diffusion_filter(factor = 3) |>
+  aznyan::median_blur()
+
+grid::grid.newpage()
+grid::grid.raster(rast, interpolate = FALSE)
+```
+
+## 試行錯誤のようす (2/4)
+
+```{r}
+#| label: fig2-bubble-universe
+#| output-location: column
+#| echo: true
+#| fig-width: 7.5
+#| fig-height: 7.5
+# もうすこし鮮やかな色味にしたい
+
+# 今は`i`ステップごとに繰り返されている
+# 色の列の順番について
+# 規則的にシャッフルしてみる
+
+# こんな感じ
+str(dat$col)
+str(rasengan::spiral(dat$col))
 
 rast <-
   canvas("black") |>
@@ -387,14 +390,20 @@ grid::grid.newpage()
 grid::grid.raster(rast, interpolate = FALSE)
 ```
 
-## こんな感じもいいかも
+## 試行錯誤のようす (3/4)
 
 ```{r}
-#| label: fig2-bubble-universe
+#| label: fig3-bubble-universe
 #| output-location: column
 #| echo: true
 #| fig-width: 7.5
 #| fig-height: 7.5
+# `point`ではない図形を使ってみる
+# ここでは十字型のSVGパスを試すことに
+
+# データの与え方がすこし違うため
+# 書きかえてみたが、思ったよりも
+# 画面がうるさすぎるかも…??
 rast <-
   canvas("black") |>
   add_path(
@@ -425,7 +434,68 @@ rast <-
     )
   ) |>
   as_nativeraster() |>
-  aznyan::box_blur()
+  aznyan::diffusion_filter(factor = 3) |>
+  aznyan::median_blur()
+
+grid::grid.newpage()
+grid::grid.raster(rast, interpolate = FALSE)
+```
+
+## 試行錯誤のようす (4/4)
+
+```{r}
+#| label: fig4-bubble-universe
+#| output-location: column
+#| echo: true
+#| fig-width: 7.5
+#| fig-height: 7.5
+# 結果の画像を値として持っているので
+# 直に編集してみると
+# おもしろい効果が得られる場合がある
+
+rast <-
+  canvas("black") |>
+  add_path(
+    rep_len("M45 10 H55 V45 H90 V55 H55 V90 H45 V55 H10 V45 H45 Z", nrow(dat)),
+    rsx_trans = dat |>
+      dplyr::reframe(pos = cbind(x, y, z)) |>
+      dplyr::mutate(
+        pos = pos %*%
+          affiner::transform2d() %*%
+          affiner::scale2d(N / 2) %*%
+          affiner::translate2d(W / 2, W / 2)
+      ) |>
+      dplyr::reframe(
+        sc = .1,
+        rot = atan2(pos[, 2], pos[, 1]),
+        x = pos[, 1],
+        y = pos[, 2],
+        ax = 50,
+        ay = 50
+      ),
+    color = dplyr::pull(dat, col) |>
+      rasengan::spiral() |>
+      col2rgba(),
+    props = paint(
+      width = 1,
+      blend_mode = BlendMode$Screen,
+      style = Style$Fill,
+    )
+  ) |>
+  as_nativeraster() |>
+  aznyan::diffusion_filter(factor = 3) |>
+  aznyan::median_blur()
+
+# 輝度が高いピクセルだけを抽出して
+# 並べ替えると、明るかった領域だけに
+# パターンが表れる
+pos <-
+  aznyan::pixel_positions(
+    rast,
+    range = c(.728, 1),
+    by = "luma"
+  )
+rast[pos$index] <- sort(rast[pos$index])
 
 grid::grid.newpage()
 grid::grid.raster(rast, interpolate = FALSE)
@@ -434,15 +504,15 @@ grid::grid.raster(rast, interpolate = FALSE)
 # Rで書くことのモチベーション
 
 - R言語は、***コード片を小さく実行してみるステップを繰り返しながら、素早くプロトタイプをつくっていく***ことに向いている
-- ***関数型らしい書き心地としては不完全なところ***がかえって書きやすさに繋がっている
-- パイプで処理をつなぐことを意識しつつ、***値を返すことを徹底する***と体験がよい
+- 関数型っぽい書き方をするが、***関数型言語としては非常に緩い感じ***を活かせると便利
+- パイプで処理をつなぐために***できるかぎり値を返すことを意識する***と体験がよい
 
 # まとめ
 
 :::{.incremental}
-- 「役に立つ範囲」だけを眺めていると、Rはすぐにつまらなくなりがち
-- ぶっちゃけRでやらなくてもいい。でも、Rでやってみたら新しい発見があるかも
-- 自分なりのRの使い方を探して、コミュニティに共有してみよう！
+- すでにRでできることのやり方だったら、AIに訊けば教えてくれる
+- でも、私たちが将来にわたってRコードを書く体験をデザインしていくのは、依然として私たち自身の仕事
+- AIではなく自分自身のための、自分なりのRの使い方を考えてみよう！
 :::
 
 # Enjoy✨{.center}
