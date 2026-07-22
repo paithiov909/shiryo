@@ -1,7 +1,7 @@
 # shiryo
 
 - **JA**
-  - [間違った線形回帰の使い方](https://paithiov909.github.io/shiryo/color-mapping/)
+  - [なぜR言語を使うのか](https://paithiov909.github.io/shiryo/design-skiagd/)
   - [gibasa（日本語テキスト分析のためのRパッケージ）の紹介](https://paithiov909.github.io/shiryo/gibasa/)
   - [Rによる天気予報風のグラフ表現](https://paithiov909.github.io/shiryo/pre48h-202408/)
   - [Rを使って短歌の「詩的度」を測る](https://paithiov909.github.io/shiryo/tanka-wrd/slides)
