@@ -22,7 +22,7 @@ div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
   width: 0.8em;
-  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */
   vertical-align: middle;
 }
 /* CSS for syntax highlighting */
@@ -82,7 +82,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta property="og:type" content="article">
 <meta property="og:title" content="そんぐらむ">
 <meta property="og:description" content="A simple sonifier for micropoetry, transforming short Japanese texts into abstract MIDI soundscapes.">
-<meta property="og:url" content="https://paithiov909.quarto.pub/songram/">
+<meta property="og:url" content="https://paithiov909.github.io/shiryo/songram/">
 <meta property="twitter:card" content="summary">
 <link rel="icon" href="https://fav.farm/🎶" data-external="1">
 <script type="module" src="index_files/libs/quarto-ojs/quarto-ojs-runtime.js"></script>
@@ -114,17 +114,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
              <p>Akiru Kato (paithiov909) </p>
           </div>
   </div>
-    
+
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
       <p class="date">December 3, 2025</p>
     </div>
   </div>
-  
-    
+
+
   </div>
-  
+
 
 
 </header>
@@ -271,7 +271,7 @@ window._ojs.runtime.interpretFromScriptTags();
     anchorJS.add('.anchored');
     const isCodeAnnotation = (el) => {
       for (const clz of el.classList) {
-        if (clz.startsWith('code-annotation-')) {                     
+        if (clz.startsWith('code-annotation-')) {
           return true;
         }
       }
@@ -291,11 +291,11 @@ window._ojs.runtime.interpretFromScriptTags();
         button.setAttribute("data-bs-toggle", "tooltip");
         button.setAttribute("data-bs-placement", "left");
         button.setAttribute("data-bs-title", "Copied!");
-        tooltip = new bootstrap.Tooltip(button, 
-          { trigger: "manual", 
+        tooltip = new bootstrap.Tooltip(button,
+          { trigger: "manual",
             customClass: "code-copy-button-tooltip",
             offset: [0, -8]});
-        tooltip.show();    
+        tooltip.show();
       }
       setTimeout(function() {
         if (tooltip) {
@@ -379,7 +379,7 @@ window._ojs.runtime.interpretFromScriptTags();
       if (onUntriggerFn) {
         config.onUntrigger = onUntriggerFn;
       }
-      window.tippy(el, config); 
+      window.tippy(el, config);
     }
     const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
     for (var i=0; i<noterefs.length; i++) {
@@ -454,7 +454,7 @@ window._ojs.runtime.interpretFromScriptTags();
       tippyHover(xref, undefined, function(instance) {
         instance.disable();
         let url = xref.getAttribute('href');
-        let hash = undefined; 
+        let hash = undefined;
         if (url.startsWith('#')) {
           hash = url;
         } else {
@@ -482,7 +482,7 @@ window._ojs.runtime.interpretFromScriptTags();
               if (note !== null) {
                 const html = processXRef(id, note);
                 instance.setContent(html);
-              } 
+              }
             }).finally(() => {
               instance.enable();
               instance.show();
@@ -506,7 +506,7 @@ window._ojs.runtime.interpretFromScriptTags();
               }
               const html = processXRef(null, note);
               instance.setContent(html);
-            } 
+            }
           }).finally(() => {
             instance.enable();
             instance.show();
@@ -546,7 +546,7 @@ window._ojs.runtime.interpretFromScriptTags();
               height = bottom - top;
             }
             if (top !== null && height !== null && parent !== null) {
-              // cook up a div (if necessary) and position it 
+              // cook up a div (if necessary) and position it
               let div = window.document.getElementById("code-annotation-line-highlight");
               if (div === null) {
                 div = window.document.createElement("div");

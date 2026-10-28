@@ -2,6 +2,7 @@
 
 - **JA**
   - [なぜR言語を使うのか](https://paithiov909.github.io/shiryo/design-skiagd/)
+  - [R言語からはじめるシェーダー芸入門](https://paithiov909.github.io/shiryo/beyond-the-heliosphere/)
   - [gibasa（日本語テキスト分析のためのRパッケージ）の紹介](https://paithiov909.github.io/shiryo/gibasa/)
   - [Rによる天気予報風のグラフ表現](https://paithiov909.github.io/shiryo/pre48h-202408/)
   - [Rを使って短歌の「詩的度」を測る](https://paithiov909.github.io/shiryo/tanka-wrd/slides)
